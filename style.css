@@ -1,7 +1,10 @@
 /* ==========================================================================
    غرفة التحكم والإدارة العليا (Control Room) — حُجرية بريس (Hujariya Press)
-   التصميم القيادي النظيف بأسلوب الجزيرة + المتغيرات اللونية الديناميكية
-   مضبوط بالكامل للجوال والشاشات الكبيرة دون أي انكماش أو اقتطاع أفقي
+   الإصدار البصري المطور (Ultra-Clean Editorial UI & Smooth Motion v5.2):
+   - شبكة إحصائيات مدمجة (2x2 Bento Grid) على الجوال لتوفير المساحة الرأسية
+   - شريط تنقل سفلي ذكي مانع لتداخل النصوص مع مؤثرات حركية ناعمة
+   - تبويبات مراجعة انسيابية (Swipeable Segmented Pills) بدون انكسار عشوائي
+   - متغيرات لونية ديناميكية تدعم تغيير الهوية اللونية فوراً من الإعدادات
    ========================================================================== */
 
 @font-face {
@@ -21,19 +24,19 @@
 :root {
   --brand-primary: #b80d38;
   --brand-dark: #8e0729;
-  --brand-soft: rgba(184, 13, 56, 0.08);
-  --brand-border: rgba(184, 13, 56, 0.24);
-  --brand-shadow: 0 8px 26px rgba(184, 13, 56, 0.12);
+  --brand-soft: rgba(184, 13, 56, 0.07);
+  --brand-border: rgba(184, 13, 56, 0.20);
+  --brand-shadow: 0 10px 28px -6px rgba(184, 13, 56, 0.14);
 
   --bg-page: #f4f6f9;
   --bg-surface: #ffffff;
   --bg-subtle: #eef1f6;
 
   --text-main: #0c0d0e;
-  --text-body: #262930;
-  --text-muted: #646973;
+  --text-body: #282b33;
+  --text-muted: #686e7a;
 
-  --border-light: #e4e7ec;
+  --border-light: #e6e9ef;
   --border-med: #cfd5df;
 
   --verified-blue: #0284c7;
@@ -41,9 +44,13 @@
   --warning-amber: #b45309;
   --danger-red: #b91c1c;
 
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+
+  --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   --font-editorial: 'AlJazeeraCustom', 'Almarai', 'Alexandria', sans-serif;
 }
@@ -73,9 +80,10 @@ body.cr-body {
   max-width: 100vw;
   display: flex;
   flex-direction: column;
-  line-height: 1.65;
+  line-height: 1.6;
   overflow-x: hidden;
   position: relative;
+  -webkit-font-smoothing: antialiased;
 }
 
 .hidden {
@@ -93,16 +101,21 @@ button, input, select, textarea {
 
 button {
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    transform 0.22s var(--ease-out-expo),
+    background-color 0.22s var(--ease-out-expo),
+    color 0.22s var(--ease-out-expo),
+    border-color 0.22s var(--ease-out-expo),
+    box-shadow 0.22s var(--ease-out-expo);
 }
 
 button:active {
-  transform: scale(0.97);
+  transform: scale(0.95);
 }
 
 .cr-container {
   width: 100%;
-  max-width: 1280px;
+  max-width: 1260px;
   margin: 0 auto;
   padding: 0 16px;
 }
@@ -115,11 +128,12 @@ button:active {
 }
 
 .aj-pillar {
-  width: 5px;
-  height: 22px;
+  width: 4px;
+  height: 20px;
   background-color: var(--brand-primary);
-  border-radius: 3px;
+  border-radius: 99px;
   flex-shrink: 0;
+  box-shadow: 0 2px 6px var(--brand-border);
 }
 
 .cr-brand-icon {
@@ -127,7 +141,35 @@ button:active {
   flex-shrink: 0;
 }
 
-/* ==================== 1. الأزرار والحقول القياسية ==================== */
+/* ==================== 1. الحركات والأنميشن الناعم ==================== */
+@keyframes crSlideFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes crModalPop {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes crSubtlePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+/* ==================== 2. الأزرار والحقول الموحدة ==================== */
 .cr-btn {
   display: inline-flex;
   align-items: center;
@@ -135,7 +177,7 @@ button:active {
   gap: 7px;
   padding: 9px 16px;
   border-radius: var(--radius-sm);
-  font-size: 0.86rem;
+  font-size: 0.85rem;
   font-weight: 800;
   border: 1px solid transparent;
   white-space: nowrap;
@@ -143,13 +185,14 @@ button:active {
 }
 
 .cr-btn-primary {
-  background-color: var(--brand-primary);
+  background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-dark) 100%);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(184, 13, 56, 0.18);
+  box-shadow: 0 4px 14px rgba(184, 13, 56, 0.22);
 }
 
 .cr-btn-primary:hover {
-  background-color: var(--brand-dark);
+  box-shadow: 0 6px 20px rgba(184, 13, 56, 0.32);
+  transform: translateY(-1px);
 }
 
 .cr-btn-secondary {
@@ -176,13 +219,14 @@ button:active {
 }
 
 .cr-btn-sm {
-  padding: 6px 11px;
+  padding: 6px 12px;
   font-size: 0.76rem;
+  border-radius: var(--radius-xs);
 }
 
 .cr-btn-lg {
   padding: 12px 24px;
-  font-size: 0.94rem;
+  font-size: 0.92rem;
 }
 
 .cr-btn-full {
@@ -193,7 +237,7 @@ button:active {
   background: transparent;
   border: none;
   color: var(--brand-primary);
-  font-size: 0.82rem;
+  font-size: 0.81rem;
   font-weight: 800;
   display: inline-flex;
   align-items: center;
@@ -203,14 +247,14 @@ button:active {
 }
 
 .cr-field {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   min-width: 0;
   width: 100%;
 }
 
 .cr-field label {
   display: block;
-  font-size: 0.85rem;
+  font-size: 0.83rem;
   font-weight: 800;
   color: var(--text-main);
   margin-bottom: 6px;
@@ -222,17 +266,17 @@ button:active {
   width: 100%;
   max-width: 100%;
   padding: 10px 13px;
-  border: 1.5px solid var(--border-med);
+  border: 1.5px solid var(--border-light);
   border-radius: var(--radius-sm);
   background-color: #ffffff;
   color: var(--text-main);
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   font-weight: 700;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.2s var(--ease-out-expo);
 }
 
 .cr-input-lg {
-  font-size: 1.05rem;
+  font-size: 1.02rem;
   font-weight: 800;
   padding: 12px 15px;
 }
@@ -241,19 +285,19 @@ button:active {
 .cr-textarea:focus,
 .cr-select:focus {
   border-color: var(--brand-primary);
-  box-shadow: 0 0 0 3px var(--brand-soft);
+  box-shadow: 0 0 0 3.5px var(--brand-soft);
   outline: none;
 }
 
 .cr-textarea {
   resize: vertical;
-  line-height: 1.75;
+  line-height: 1.7;
 }
 
 .cr-grid-2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 14px;
   width: 100%;
 }
 
@@ -267,16 +311,16 @@ button:active {
 .cr-split-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
-  gap: 20px;
+  gap: 18px;
   align-items: start;
   width: 100%;
 }
 
-/* ==================== 2. بوابة تسجيل الدخول المحكمة ==================== */
+/* ==================== 3. بوابة تسجيل الدخول المحكمة ==================== */
 .cr-auth-gate {
   position: fixed;
   inset: 0;
-  background: radial-gradient(circle at top right, #240811 0%, #0c0d0e 72%);
+  background: radial-gradient(circle at top right, #280813 0%, #0c0d0e 75%);
   z-index: 9000;
   display: flex;
   align-items: center;
@@ -288,17 +332,12 @@ button:active {
 .cr-auth-card {
   background-color: #ffffff;
   width: 100%;
-  max-width: 440px;
+  max-width: 430px;
   border-radius: var(--radius-lg);
   border-top: 5px solid var(--brand-primary);
-  padding: 28px 22px;
+  padding: 26px 22px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-  animation: crFadeUp 0.25s ease-out;
-}
-
-@keyframes crFadeUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  animation: crModalPop 0.32s var(--ease-out-expo);
 }
 
 .cr-auth-brand {
@@ -313,24 +352,25 @@ button:active {
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-dark) 100%);
-  padding: 6px 12px;
+  padding: 5px 11px;
   border-radius: var(--radius-sm);
   flex-shrink: 0;
+  box-shadow: 0 3px 10px rgba(184, 13, 56, 0.22);
 }
 
 .cr-logo-img {
-  max-height: 32px;
+  max-height: 28px;
   width: auto;
   object-fit: contain;
 }
 
 .cr-auth-titles h1 {
-  font-size: 1.16rem;
+  font-size: 1.12rem;
   font-weight: 900;
 }
 
 .cr-auth-titles p {
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: var(--text-muted);
   font-weight: 700;
   margin-top: 2px;
@@ -341,7 +381,7 @@ button:active {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
   background-color: var(--bg-subtle);
-  padding: 5px;
+  padding: 4px;
   border-radius: var(--radius-sm);
   margin-bottom: 18px;
 }
@@ -351,18 +391,19 @@ button:active {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  padding: 9px 8px;
+  padding: 8px;
   border: none;
-  border-radius: 6px;
+  border-radius: 7px;
   background: transparent;
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.79rem;
   font-weight: 800;
 }
 
 .cr-auth-tab.active {
   background-color: var(--brand-primary);
   color: #ffffff;
+  box-shadow: 0 2px 8px rgba(184, 13, 56, 0.25);
 }
 
 .cr-input-icon-wrap {
@@ -400,16 +441,16 @@ button:active {
   border: 1px solid #fde68a;
   border-right: 4px solid var(--warning-amber);
   border-radius: var(--radius-sm);
-  padding: 14px;
+  padding: 13px;
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 
 .cr-security-box .material-symbols-rounded {
   color: var(--warning-amber);
-  font-size: 24px;
+  font-size: 22px;
   flex-shrink: 0;
 }
 
@@ -421,7 +462,7 @@ button:active {
   border: 1px solid var(--border-light);
   padding: 10px 12px;
   border-radius: var(--radius-sm);
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .cr-bound-meta {
@@ -431,36 +472,46 @@ button:active {
 
 .cr-bound-meta strong {
   display: block;
-  font-size: 0.88rem;
+  font-size: 0.86rem;
 }
 
 .cr-bound-meta span {
   font-family: monospace;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: var(--brand-primary);
   font-weight: 900;
 }
 
 .cr-pin-input {
   text-align: center;
-  font-size: 1.45rem;
+  font-size: 1.4rem;
   letter-spacing: 8px;
   font-weight: 900;
 }
 
-/* ==================== 3. الهيدر والتنقل الرئيسي ==================== */
+/* ==================== 4. الهيدر العلوي وشريط التنقل ==================== */
 .cr-header {
   background-color: #ffffff;
-  border-bottom: 2px solid var(--brand-primary);
+  border-bottom: 1.5px solid var(--border-light);
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 18px rgba(12, 13, 14, 0.04);
   width: 100%;
 }
 
+.cr-header::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--brand-primary), var(--brand-dark));
+}
+
 .cr-header-inner {
-  height: 64px;
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -475,17 +526,18 @@ button:active {
 }
 
 .cr-brand-title {
-  font-size: 1.15rem;
+  font-size: 1.08rem;
   font-weight: 900;
   white-space: nowrap;
+  letter-spacing: -0.2px;
 }
 
 .cr-brand-subtitle {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 800;
   color: var(--text-muted);
   display: block;
-  margin-right: 13px;
+  margin-right: 12px;
 }
 
 .cr-main-nav {
@@ -499,12 +551,12 @@ button:active {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 7px 12px;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   background: transparent;
   color: var(--text-body);
-  font-size: 0.83rem;
+  font-size: 0.82rem;
   font-weight: 800;
   white-space: nowrap;
   position: relative;
@@ -513,6 +565,7 @@ button:active {
 .cr-nav-item .material-symbols-rounded {
   font-size: 20px;
   color: var(--text-muted);
+  transition: transform 0.22s var(--ease-spring), color 0.2s ease;
 }
 
 .cr-nav-item:hover {
@@ -528,20 +581,23 @@ button:active {
 
 .cr-nav-item.active .material-symbols-rounded {
   color: var(--brand-primary);
+  transform: translateY(-1px) scale(1.06);
 }
 
 .cr-mini-counter {
   background-color: var(--brand-primary);
   color: #ffffff;
-  font-size: 0.68rem;
+  font-size: 0.66rem;
+  font-weight: 900;
   padding: 1px 6px;
   border-radius: 99px;
+  animation: crSubtlePulse 2s infinite ease-in-out;
 }
 
 .cr-header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
@@ -549,17 +605,17 @@ button:active {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 6px 11px;
   border-radius: 99px;
   background-color: var(--bg-subtle);
   border: 1px solid var(--border-light);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
 .cr-icon-btn {
-  width: 36px;
-  height: 36px;
+  width: 35px;
+  height: 35px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-light);
   background-color: #ffffff;
@@ -575,10 +631,10 @@ button:active {
   color: #ffffff;
 }
 
-/* ==================== 4. الإحصائيات والبطاقات القيادية ==================== */
+/* ==================== 5. شبكة الإحصائيات المدمجة (Bento Stats Grid) ==================== */
 .cr-workspace {
   flex: 1;
-  padding-top: 20px;
+  padding-top: 16px;
   padding-bottom: 48px;
   width: 100%;
   min-width: 0;
@@ -587,33 +643,54 @@ button:active {
 .cr-view {
   width: 100%;
   min-width: 0;
-  animation: crFadeUp 0.2s ease-out;
+  animation: crSlideFadeIn 0.28s var(--ease-out-expo);
 }
 
 .cr-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-  gap: 14px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
   width: 100%;
 }
 
 .cr-stat-card {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-light);
-  border-right: 4px solid var(--brand-primary);
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: 14px 16px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  flex-direction: row-reverse;
+  gap: 10px;
   min-width: 0;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(12, 13, 14, 0.025);
+  transition: transform 0.22s var(--ease-out-expo), box-shadow 0.22s var(--ease-out-expo);
+}
+
+.cr-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 3.5px;
+  background-color: var(--brand-primary);
+  border-radius: 99px 0 0 99px;
+}
+
+.cr-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--brand-shadow);
 }
 
 .cr-stat-icon {
-  width: 46px;
-  height: 46px;
-  border-radius: 10px;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
   background-color: var(--brand-soft);
   color: var(--brand-primary);
   display: flex;
@@ -622,31 +699,49 @@ button:active {
   flex-shrink: 0;
 }
 
+.cr-stat-icon .material-symbols-rounded {
+  font-size: 22px;
+}
+
 .cr-icon-amber { background-color: #fef3c7; color: #b45309; }
 .cr-icon-slate { background-color: #e2e8f0; color: #334155; }
 .cr-icon-blue { background-color: #e0f2fe; color: #0369a1; }
 
+.cr-stat-data {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+}
+
 .cr-stat-data span {
   display: block;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 800;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
 }
 
 .cr-stat-data strong {
-  font-size: 1.42rem;
+  font-size: 1.35rem;
   font-weight: 900;
+  line-height: 1.15;
+  color: var(--text-main);
+  display: block;
 }
 
+/* ==================== 6. البطاقات القيادية وتبويبات المراجعات الانسيابية ==================== */
 .cr-panel-card {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
-  padding: 20px;
+  padding: 18px;
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 3px 14px rgba(12, 13, 14, 0.03);
 }
 
 .cr-panel-header {
@@ -656,75 +751,102 @@ button:active {
   gap: 10px;
   flex-wrap: wrap;
   padding-bottom: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   border-bottom: 1px solid var(--border-light);
 }
 
 .cr-panel-header h2,
 .cr-panel-header h3 {
-  font-size: 1.05rem;
+  font-size: 1.02rem;
   font-weight: 900;
 }
 
-/* ==================== 5. تبويبات المراجعات وصفوف العناصر ==================== */
+/* شريط التبويبات الفرعية الأفقي الانسيابي (يمنع الانكسار العشوائي في الجوال) */
 .cr-subtabs {
   display: flex;
+  align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-  padding-bottom: 12px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 16px;
+  padding: 4px 2px 10px;
   border-bottom: 1px solid var(--border-light);
+}
+
+.cr-subtabs::-webkit-scrollbar {
+  display: none;
 }
 
 .cr-subtab {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 9px 14px;
-  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  border-radius: 99px;
   border: 1px solid var(--border-light);
   background-color: var(--bg-subtle);
   color: var(--text-body);
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.22s var(--ease-out-expo);
+}
+
+.cr-subtab .material-symbols-rounded {
+  font-size: 18px;
 }
 
 .cr-subtab.active {
-  background-color: var(--brand-primary);
+  background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-dark) 100%);
   border-color: var(--brand-primary);
   color: #ffffff;
+  box-shadow: 0 4px 12px rgba(184, 13, 56, 0.22);
 }
 
 .cr-subtab-count {
-  background-color: rgba(0, 0, 0, 0.14);
+  background-color: rgba(12, 13, 14, 0.12);
   padding: 1px 7px;
   border-radius: 99px;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.cr-subtab.active .cr-subtab-count {
+  background-color: rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+}
+
+.cr-rev-pane {
+  animation: crSlideFadeIn 0.22s var(--ease-out-expo);
 }
 
 .cr-list-stack {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .cr-row-card {
   border: 1px solid var(--border-light);
-  border-right: 4px solid var(--brand-primary);
+  border-right: 3.5px solid var(--brand-primary);
   border-radius: var(--radius-sm);
-  padding: 15px 16px;
+  padding: 14px 15px;
   background-color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  gap: 12px;
   flex-wrap: wrap;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.22s var(--ease-out-expo);
 }
 
 .cr-row-card:hover {
   border-color: var(--brand-border);
   box-shadow: var(--brand-shadow);
+  transform: translateY(-1px);
 }
 
 .cr-status-badge {
@@ -733,7 +855,7 @@ button:active {
   gap: 4px;
   padding: 3px 9px;
   border-radius: 99px;
-  font-size: 0.73rem;
+  font-size: 0.72rem;
   font-weight: 800;
 }
 
@@ -742,7 +864,7 @@ button:active {
 .st-draft { background: #e2e8f0; color: #334155; }
 .st-rejected { background: #fee2e2; color: #b91c1c; }
 
-/* أزرار التحكم الفوري بالأولويات (عاجل / رئيسية / نبض) */
+/* أزرار التحكم الفوري بالأولويات */
 .cr-priority-toggles {
   display: inline-flex;
   gap: 6px;
@@ -751,11 +873,11 @@ button:active {
 
 .cr-prio-chip {
   padding: 4px 10px;
-  border-radius: 6px;
+  border-radius: 99px;
   border: 1px solid var(--border-med);
   background-color: var(--bg-page);
   color: var(--text-muted);
-  font-size: 0.74rem;
+  font-size: 0.73rem;
   font-weight: 800;
   display: inline-flex;
   align-items: center;
@@ -771,17 +893,27 @@ button:active {
 .cr-filter-pills {
   display: flex;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  max-width: 100%;
+  padding-bottom: 2px;
+}
+
+.cr-filter-pills::-webkit-scrollbar {
+  display: none;
 }
 
 .cr-filter-pill {
-  padding: 5px 11px;
+  padding: 5px 12px;
   border-radius: 99px;
   border: 1px solid var(--border-light);
   background: var(--bg-subtle);
   color: var(--text-body);
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .cr-filter-pill.active {
@@ -794,7 +926,7 @@ button:active {
   position: relative;
   display: flex;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .cr-search-bar .material-symbols-rounded {
@@ -808,21 +940,21 @@ button:active {
   padding-right: 40px;
 }
 
-/* ==================== 6. شبكة الكادر الصحفي والملف الشامل (Dossier) ==================== */
+/* ==================== 7. شبكة الكادر الصحفي والملف الشامل (Dossier) ==================== */
 .cr-staff-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 14px;
 }
 
 .cr-staff-card {
   background-color: #ffffff;
   border: 1px solid var(--border-light);
-  border-right: 4px solid var(--brand-primary);
+  border-right: 3.5px solid var(--brand-primary);
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: 15px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.22s var(--ease-out-expo);
 }
 
 .cr-staff-card:hover {
@@ -841,16 +973,16 @@ button:active {
   font-family: monospace;
   background-color: #111317;
   color: #ffffff;
-  padding: 3px 9px;
+  padding: 3px 8px;
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 900;
-  letter-spacing: 1px;
+  letter-spacing: 0.8px;
 }
 
 .cr-cats-checkbox-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 8px;
   padding: 12px;
   background-color: var(--bg-page);
@@ -867,7 +999,7 @@ button:active {
   border: 1px solid var(--border-light);
   background-color: var(--bg-page);
   cursor: pointer;
-  font-size: 0.83rem;
+  font-size: 0.82rem;
   font-weight: 800;
 }
 
@@ -880,14 +1012,14 @@ button:active {
 .cr-toggle-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
-/* ==================== 7. إعدادات الهوية والشعارات الثلاثة واللون الديناميكي ==================== */
+/* ==================== 8. إعدادات الهوية والشعارات الثلاثة واللون الديناميكي ==================== */
 .cr-settings-stack {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 }
 
 .cr-color-picker-row {
@@ -898,8 +1030,8 @@ button:active {
 }
 
 .cr-color-swatch {
-  width: 46px;
-  height: 44px;
+  width: 44px;
+  height: 42px;
   border: 1px solid var(--border-med);
   border-radius: var(--radius-sm);
   padding: 2px;
@@ -914,8 +1046,8 @@ button:active {
 }
 
 .cr-color-preset {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: 2px solid #ffffff;
   box-shadow: 0 0 0 1px var(--border-med);
@@ -923,8 +1055,8 @@ button:active {
 
 .cr-logos-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: 14px;
 }
 
 .cr-logo-config-box {
@@ -936,7 +1068,7 @@ button:active {
 
 .cr-logo-config-box label {
   display: block;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 900;
   margin-bottom: 8px;
 }
@@ -950,12 +1082,12 @@ button:active {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 800;
 }
 
 .cr-img-preview-bar img {
-  max-height: 44px;
+  max-height: 40px;
   width: auto;
   object-fit: contain;
   border-radius: 4px;
@@ -965,55 +1097,58 @@ button:active {
   background-color: var(--brand-soft);
   color: var(--brand-primary);
   border: 1px solid var(--brand-border);
-  padding: 4px 12px;
+  padding: 4px 11px;
   border-radius: 99px;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 800;
 }
 
 .cr-helper-text {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
   font-weight: 700;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .cr-empty-box {
   border: 1.5px dashed var(--border-med);
   border-radius: var(--radius-sm);
-  padding: 32px 16px;
+  padding: 28px 16px;
   text-align: center;
   color: var(--text-muted);
+  font-size: 0.85rem;
   font-weight: 800;
+  background-color: rgba(244, 246, 249, 0.5);
 }
 
-/* ==================== 8. النوافذ القيادية المنبثقة (Modals) ==================== */
+/* ==================== 9. النوافذ القيادية المنبثقة (Modals) ==================== */
 .cr-modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(12, 13, 14, 0.8);
-  backdrop-filter: blur(5px);
+  background-color: rgba(12, 13, 14, 0.78);
+  backdrop-filter: blur(6px);
   z-index: 9500;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 14px;
+  padding: 12px;
 }
 
 .cr-modal-card {
   background-color: #ffffff;
   width: 100%;
-  max-width: 660px;
-  max-height: 92vh;
+  max-width: 650px;
+  max-height: 90vh;
   overflow-y: auto;
   border-radius: var(--radius-lg);
   border-top: 5px solid var(--brand-primary);
-  padding: 22px 20px;
+  padding: 20px 18px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  animation: crModalPop 0.28s var(--ease-out-expo);
 }
 
 .cr-modal-xl {
-  max-width: 960px;
+  max-width: 940px;
 }
 
 .cr-modal-header {
@@ -1022,22 +1157,22 @@ button:active {
   justify-content: space-between;
   gap: 10px;
   padding-bottom: 12px;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
   border-bottom: 1px solid var(--border-light);
 }
 
 .cr-modal-header h2 {
-  font-size: 1.15rem;
+  font-size: 1.08rem;
   font-weight: 900;
 }
 
 .cr-rich-editor {
-  min-height: 300px;
-  padding: 18px;
+  min-height: 280px;
+  padding: 16px;
   border: 1.5px solid var(--border-med);
   border-radius: var(--radius-sm);
   background-color: #ffffff;
-  font-size: 1.02rem;
+  font-size: 1rem;
   line-height: 1.85;
   outline: none;
   overflow-y: auto;
@@ -1048,8 +1183,8 @@ button:active {
 }
 
 .cr-pane-footer {
-  margin-top: 20px;
-  padding-top: 16px;
+  margin-top: 18px;
+  padding-top: 14px;
   border-top: 1px solid var(--border-light);
   display: flex;
   align-items: center;
@@ -1064,8 +1199,8 @@ button:active {
 
 .cr-sig-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
   margin-top: 10px;
 }
 
@@ -1073,24 +1208,24 @@ button:active {
   background-color: var(--bg-page);
   border: 1px dashed var(--border-med);
   border-radius: var(--radius-sm);
-  padding: 10px;
+  padding: 8px;
   text-align: center;
 }
 
 .cr-sig-box img {
-  max-height: 115px;
+  max-height: 105px;
   width: auto;
   margin: 6px auto 0;
   object-fit: contain;
   cursor: zoom-in;
 }
 
-/* ==================== 9. التذييل والتوست (Toast) ==================== */
+/* ==================== 10. التذييل والتوست (Toast) ==================== */
 .cr-footer {
   background-color: #ffffff;
   border-top: 1px solid var(--border-light);
-  padding: 16px 0;
-  font-size: 0.78rem;
+  padding: 14px 0;
+  font-size: 0.76rem;
   color: var(--text-muted);
 }
 
@@ -1109,29 +1244,30 @@ button:active {
 }
 
 .cr-footer-logo {
-  max-height: 26px;
+  max-height: 24px;
   width: auto;
 }
 
 .cr-toast {
   position: fixed;
-  bottom: 78px;
+  bottom: 76px;
   left: 50%;
   transform: translateX(-50%);
   background-color: #0c0d0e;
   color: #ffffff;
   border-right: 4px solid var(--brand-primary);
-  padding: 11px 18px;
+  padding: 10px 18px;
   border-radius: var(--radius-sm);
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 800;
   z-index: 12000;
   width: max-content;
-  max-width: calc(100vw - 32px);
+  max-width: calc(100vw - 28px);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  animation: crSlideFadeIn 0.22s var(--ease-out-expo);
 }
 
-/* ==================== 10. التجاوب مع الجوال والشاشات الصغيرة ==================== */
+/* ==================== 11. تحسينات الجوال والشاشات الصغيرة (Mobile-First Polish) ==================== */
 @media (max-width: 960px) {
   .cr-split-layout,
   .cr-grid-2,
@@ -1146,7 +1282,7 @@ button:active {
   }
 
   .cr-header-inner {
-    height: 56px;
+    height: 54px;
   }
 
   .cr-brand-subtitle,
@@ -1155,60 +1291,139 @@ button:active {
   }
 
   .cr-admin-pill {
-    padding: 6px;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    justify-content: center;
   }
 
-  /* شريط تنقل سفلي ثابت وموزع بدقة لـ 6 منافذ قيادية على الجوال */
+  .cr-icon-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  /* تحويل الإحصائيات الأربع في الجوال إلى شبكة 2x2 مدمجة وأنيقة جداً */
+  .cr-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+    margin-bottom: 14px;
+  }
+
+  .cr-stat-card {
+    padding: 11px 12px;
+    gap: 8px;
+  }
+
+  .cr-stat-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+  }
+
+  .cr-stat-icon .material-symbols-rounded {
+    font-size: 19px;
+  }
+
+  .cr-stat-data span {
+    font-size: 0.67rem;
+  }
+
+  .cr-stat-data strong {
+    font-size: 1.16rem;
+  }
+
+  /* شريط التنقل السفلي الذكي لـ 6 منافذ بدون أي تداخل أو ازدحام في النصوص */
   .cr-main-nav {
     position: fixed;
     bottom: 0;
     right: 0;
     left: 0;
     height: 62px;
-    background-color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
     border-top: 1px solid var(--border-light);
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 2px;
-    padding: 4px 4px;
+    padding: 5px 4px;
     z-index: 950;
-    box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.07);
+    box-shadow: 0 -4px 20px rgba(12, 13, 14, 0.06);
   }
 
   .cr-nav-item {
     flex-direction: column;
     justify-content: center;
-    gap: 2px;
-    padding: 4px 2px;
-    border-radius: 6px;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 2px;
+    border-radius: 10px;
     border: none;
-    font-size: 0.62rem;
-    font-weight: 800;
+    min-width: 0;
+    width: 100%;
+    overflow: hidden;
   }
 
   .cr-nav-item .material-symbols-rounded {
     font-size: 20px;
+    padding: 2px 10px;
+    border-radius: 99px;
+    transition: all 0.25s var(--ease-spring);
+  }
+
+  .cr-nav-item.active {
+    background-color: transparent;
+  }
+
+  .cr-nav-item.active .material-symbols-rounded {
+    background-color: var(--brand-soft);
+    color: var(--brand-primary);
+    transform: translateY(-1px);
+  }
+
+  .cr-nav-text {
+    display: block;
+    width: 100%;
+    text-align: center;
+    font-size: 0.56rem;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 1px;
+  }
+
+  .cr-nav-item.active .cr-nav-text {
+    color: var(--brand-primary);
+    font-weight: 900;
   }
 
   .cr-mini-counter {
     position: absolute;
     top: 2px;
-    left: 12%;
-    font-size: 0.6rem;
+    left: 14%;
+    font-size: 0.58rem;
     padding: 0 4px;
+    min-width: 15px;
+    height: 15px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .cr-workspace {
-    padding-top: 14px;
-    padding-bottom: 84px;
+    padding-top: 12px;
+    padding-bottom: 82px;
   }
 
   .cr-footer {
-    padding-bottom: 76px;
+    padding-bottom: 74px;
   }
 
   .cr-panel-card,
   .cr-modal-card {
-    padding: 14px;
+    padding: 14px 12px;
   }
 }
