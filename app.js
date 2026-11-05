@@ -1,16 +1,11 @@
 /* ==========================================================================
-   حُجرية بريس (Hujariya Press) — المحرك البرمجي الشامل لغرفة التحكم العليا (app.js)
-   النسخة القيادية الكاملة (Control Room v5.0):
-   1. مصادقة إدارية محكمة + ربط رمز الدخول السريع (PIN) بالجهاز الموثق حصراً
-   2. مركز المراجعات الرباعي: (المنشورات المعلقة، التوقيعات الثلاثية، توثيق الهويات KYC، وطلبات الحذف)
-   3. إدارة شاملة للأخبار: فلاتر ذكية + أزرار فورية لتبديل (العاجل / الواجهة الكبرى / النبض) + محرر تعديل كامل
-   4. السيطرة الكاملة على الكادر (God Mode Dossier):
-      - توليد الهوية الصحفية الثابتة (HP##### بدون شرطة)
-      - تعديل كلمة المرور، اسم المستخدم، الـ PIN، الصورة الشخصية، المسمى، والصلاحيات في أي وقت
-      - تخصيص الأقسام المسموحة لكل صحفي (قسم واحد إجباري، عدة أقسام، أو الكل)
-      - تجميد/تفعيل الحساب، منح/سحب الشارة الزرقاء، النشر المباشر، ومراسلة فورية عبر واتساب والبريد
-   5. إدارة الأقسام الرئيسية والفرعية + إدارة الإعلانات الممولة مع إحصائيات المشاهدات والنقرات
-   6. إعدادات الهوية الكاملة: الشعارات الثلاثة، اللون الديناميكي العام، ترقية إصدار ميثاق الشرف، والتواصل
+   حُجرية بريس (Hujariya Press) — المحرك البرمجي لغرفة التحكم العليا (app.js v6.0)
+   [الجزء الأول من 2]:
+   - التهيئة السحابية (Firebase Firestore) + الرفع السحابي للصور عبر (ImgBB API)
+   - الأزرار التفاعلية الذكية (Loading States) + نافذة التأكيد الزجاجية الآمنة
+   - الهوية اللونية الديناميكية + الشعارات الثلاثة + أمان الدخول وربط الـ PIN بالجهاز
+   - مركز المراجعات الرباعي + المعاينة الحية للخبر + مراجعة طلبات الحذف مع السبب
+   - إدارة كافة الأخبار + الترقيم الذكي (Pagination) + المحرر الشامل للأخبار
    ========================================================================== */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -26,7 +21,7 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// ==================== 1. إعدادات الاتصال بقاعدة بيانات Firebase ====================
+// ==================== 1. إعدادات Firebase ومفتاح السحابة المصورة (ImgBB API) ====================
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyAd4Df_Fpp2GlGkRPyvmKuFW68LbL_a4yU",
   authDomain: "rawi-01.firebaseapp.com",
@@ -38,15 +33,17 @@ const FIREBASE_CONFIG = {
   measurementId: "G-2VNWNSZLBJ"
 };
 
+const DEFAULT_IMGBB_API_KEY = "6d207e02198a847aa98d0a2a901485a5";
+
 const app = initializeApp(FIREBASE_CONFIG);
 const db = getFirestore(app);
 
-// مفاتيح الجلسة وربط الجهاز والكاش السريع لغرفة التحكم
-const CR_SESSION_KEY = "hujariya_cr_admin_session_v5";
-const CR_DEVICE_BOUND_KEY = "hujariya_cr_device_bound_v5";
-const CR_FAST_CACHE_KEY = "hujariya_cr_fast_cache_v5";
+const CR_SESSION_KEY = "hujariya_cr_admin_session_v6";
+const CR_DEVICE_BOUND_KEY = "hujariya_cr_device_bound_v6";
+const CR_FAST_CACHE_KEY = "hujariya_cr_fast_cache_v6";
 
 const DEFAULT_BRAND_COLOR = "#b80d38";
+const POSTS_PER_PAGE = 12;
 
 const DEFAULT_COMPASSES = [
   {
@@ -149,6 +146,7 @@ const state = {
     defaultPostImageUrl: "",
     faviconUrl: "",
     appIconUrl: "",
+    imgbbApiKey: DEFAULT_IMGBB_API_KEY,
     charterHtml: DEFAULT_CHARTER_HTML,
     charterVersion: 1,
     aboutHtml: "",
@@ -167,14 +165,16 @@ const state = {
   postsFilterType: "all",
   postsFilterCategory: "all",
   postsSearchQuery: "",
+  postsCurrentPage: 1,
   staffSearchQuery: "",
   activeDossierStaffId: null,
-  dossierAvatarTempData: "",
-  editPostImageTempData: "",
-  adImageTempData: ""
+  dossierAvatarTempUrl: "",
+  editPostImageTempUrl: "",
+  adImageTempUrl: "",
+  previewingPostId: null
 };
 
-// ==================== 3. الدوال المساعدة، الهوية اللونية الديناميكية، وحساب العمر ====================
+// ==================== 3. الدوال التفاعلية، نافذة التأكيد، ورفع الصور إلى ImgBB ====================
 function escapeHtml(str = "") {
   return String(str)
     .replace(/&/g, "&amp;")
@@ -221,6 +221,93 @@ function showToast(msg) {
   }, 3400);
 }
 
+function setButtonLoading(btnOrId, isLoading, loadingText = "جاري التنفيذ...") {
+  const btn =
+    typeof btnOrId === "string" ? document.getElementById(btnOrId) : btnOrId;
+  if (!btn) return;
+
+  const labelEl = btn.querySelector(".cr-btn-label") || btn.querySelector("span:last-child");
+
+  if (isLoading) {
+    if (!btn.dataset.originalLabel && labelEl) {
+      btn.dataset.originalLabel = labelEl.textContent;
+    }
+    btn.disabled = true;
+    btn.classList.add("is-loading");
+    if (labelEl) labelEl.textContent = loadingText;
+  } else {
+    btn.disabled = false;
+    btn.classList.remove("is-loading");
+    if (btn.dataset.originalLabel && labelEl) {
+      labelEl.textContent = btn.dataset.originalLabel;
+    }
+  }
+}
+
+function askAdminConfirmation({
+  title = "تأكيد القرار الإداري",
+  message = "هل أنت متأكد من تنفيذ هذا الإجراء؟",
+  confirmText = "نعم، تأكيد",
+  icon = "help",
+  danger = false
+} = {}) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("cr-confirm-modal");
+    const titleEl = document.getElementById("cr-confirm-title");
+    const msgEl = document.getElementById("cr-confirm-message");
+    const iconEl = document.getElementById("cr-confirm-icon");
+    const iconBox = document.getElementById("cr-confirm-icon-box");
+    const acceptBtn = document.getElementById("cr-confirm-accept-btn");
+    const acceptLabel = document.getElementById("cr-confirm-accept-label");
+    const cancelBtn = document.getElementById("cr-confirm-cancel-btn");
+
+    if (!modal || !acceptBtn || !cancelBtn) {
+      resolve(window.confirm(message));
+      return;
+    }
+
+    if (titleEl) titleEl.textContent = title;
+    if (msgEl) msgEl.textContent = message;
+    if (iconEl) iconEl.textContent = icon;
+    if (acceptLabel) acceptLabel.textContent = confirmText;
+
+    if (iconBox) {
+      iconBox.style.backgroundColor = danger ? "#fef2f2" : "var(--brand-soft)";
+      iconBox.style.color = danger ? "var(--danger-red)" : "var(--brand-primary)";
+    }
+
+    acceptBtn.className = danger
+      ? "cr-btn cr-btn-danger"
+      : "cr-btn cr-btn-primary";
+
+    modal.classList.remove("hidden");
+
+    const cleanup = () => {
+      modal.classList.add("hidden");
+      acceptBtn.onclick = null;
+      cancelBtn.onclick = null;
+    };
+
+    cancelBtn.onclick = () => {
+      cleanup();
+      resolve(false);
+    };
+
+    acceptBtn.onclick = () => {
+      cleanup();
+      resolve(true);
+    };
+  });
+}
+
+function debounce(fn, delay = 200) {
+  let timer = null;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
 function getTimestampMs(item) {
   if (!item) return 0;
   const t =
@@ -261,6 +348,83 @@ function calculateAutoAge(dobStr) {
   return age >= 0 && age < 120 ? age : null;
 }
 
+function compressImageToDataUrl(file, maxWidth = 1150, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      resolve("");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxWidth / (img.width || maxWidth));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round((img.width || maxWidth) * scale);
+        canvas.height = Math.round((img.height || maxWidth) * scale);
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/webp", quality));
+      };
+      img.onerror = () => reject(new Error("تعذر قراءة الصورة"));
+      img.src = ev.target.result;
+    };
+    reader.onerror = () => reject(new Error("فشل تحميل الملف"));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadImageToImgBB(fileOrDataUrl, maxWidth = 1150, quality = 0.82) {
+  let dataUrl = "";
+  if (typeof fileOrDataUrl === "string" && fileOrDataUrl.startsWith("data:")) {
+    dataUrl = fileOrDataUrl;
+  } else if (fileOrDataUrl instanceof File || fileOrDataUrl instanceof Blob) {
+    dataUrl = await compressImageToDataUrl(fileOrDataUrl, maxWidth, quality);
+  } else {
+    throw new Error("ملف غير صالح");
+  }
+
+  const base64String = dataUrl.split(",")[1];
+  const apiKey = (state.settings.imgbbApiKey || DEFAULT_IMGBB_API_KEY).trim();
+
+  try {
+    const formData = new FormData();
+    formData.append("key", apiKey);
+    formData.append("image", base64String);
+
+    const response = await fetch("https://api.imgbb.com/1/upload", {
+      method: "POST",
+      body: formData
+    });
+
+    if (response.ok) {
+      const json = await response.json();
+      const directUrl =
+        json?.data?.display_url || json?.data?.url || json?.data?.image?.url;
+      if (directUrl) {
+        return { url: directUrl, host: "imgbb" };
+      }
+    }
+  } catch (err) {
+    console.warn("ImgBB fallback triggered:", err);
+  }
+
+  if (fileOrDataUrl instanceof File || fileOrDataUrl instanceof Blob) {
+    const compact = await compressImageToDataUrl(fileOrDataUrl, 680, 0.68);
+    return { url: compact, host: "compact" };
+  }
+  return { url: dataUrl, host: "compact" };
+}
+
+function openImageInLightbox(imgSrc) {
+  if (!imgSrc) return;
+  const modal = document.getElementById("cr-image-lightbox");
+  const img = document.getElementById("lightbox-preview-img");
+  if (!modal || !img) return;
+  img.src = imgSrc;
+  modal.classList.remove("hidden");
+}
+
 function hexToRgbTuple(hex = DEFAULT_BRAND_COLOR) {
   const clean = String(hex).replace("#", "").trim();
   if (clean.length !== 6) return "184, 13, 56";
@@ -294,8 +458,8 @@ function applyDynamicThemeAndBranding(overrideColor = "") {
   root.style.setProperty("--brand-primary", primaryColor);
   root.style.setProperty("--brand-dark", darkColor);
   root.style.setProperty("--brand-soft", `rgba(${rgb}, 0.08)`);
-  root.style.setProperty("--brand-border", `rgba(${rgb}, 0.24)`);
-  root.style.setProperty("--brand-shadow", `0 8px 26px rgba(${rgb}, 0.14)`);
+  root.style.setProperty("--brand-border", `rgba(${rgb}, 0.22)`);
+  root.style.setProperty("--brand-shadow", `0 12px 32px -8px rgba(${rgb}, 0.16)`);
 
   document.getElementById("cr-theme-color")?.setAttribute("content", primaryColor);
 
@@ -343,42 +507,7 @@ function applyDynamicThemeAndBranding(overrideColor = "") {
   }
 }
 
-function compressImageToWebp(file, maxWidth = 1100, quality = 0.8) {
-  return new Promise((resolve, reject) => {
-    if (!file) {
-      resolve("");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxWidth / (img.width || maxWidth));
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round((img.width || maxWidth) * scale);
-        canvas.height = Math.round((img.height || maxWidth) * scale);
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/webp", quality));
-      };
-      img.onerror = () => reject(new Error("تعذر قراءة الصورة"));
-      img.src = ev.target.result;
-    };
-    reader.onerror = () => reject(new Error("فشل تحميل الملف"));
-    reader.readAsDataURL(file);
-  });
-}
-
-function openImageInLightbox(imgSrc) {
-  if (!imgSrc) return;
-  const modal = document.getElementById("cr-image-lightbox");
-  const img = document.getElementById("lightbox-preview-img");
-  if (!modal || !img) return;
-  img.src = imgSrc;
-  modal.classList.remove("hidden");
-}
-
-// ==================== 4. الكاش السريع (0ms Instant Cache) ====================
+// ==================== 4. الكاش السريع (0ms Cache) + نظام الدخول وربط الجهاز ====================
 function saveFastCache() {
   try {
     const payload = {
@@ -415,7 +544,6 @@ function restoreFastCache() {
   }
 }
 
-// ==================== 5. نظام الدخول الإداري المحكم والـ PIN المرتبط بالجهاز ====================
 function getDeviceBoundAdmin() {
   try {
     const raw = localStorage.getItem(CR_DEVICE_BOUND_KEY);
@@ -479,7 +607,6 @@ function verifyAdminCredentials(identifierRaw, passwordRaw) {
   const pressIdClean = normalizePressId(identifierRaw);
   const passClean = String(passwordRaw || "").trim();
 
-  // 1. التحقق من حساب المدير العام (Master Admin)
   const masterUser = String(state.settings.masterUsername || "admin").trim().toLowerCase();
   const masterPass = String(state.settings.masterPassword || "admin").trim();
 
@@ -487,13 +614,14 @@ function verifyAdminCredentials(identifierRaw, passwordRaw) {
     (idClean === masterUser || idClean === "admin" || pressIdClean === "HP10001") &&
     (passClean === masterPass || (!state.settings.masterPassword && passClean === "admin"))
   ) {
+    const savedMaster = state.staff.find((s) => s.id === "master-admin");
     return {
       ...MASTER_ADMIN_DEFAULT,
+      ...(savedMaster || {}),
       username: state.settings.masterUsername || "admin"
     };
   }
 
-  // 2. التحقق من مديري التحرير المخولين في الكادر (role === "admin" أو isMasterAdmin)
   const matchedAdmin = state.staff.find((s) => {
     const isAdminRole = Boolean(
       s.isMasterAdmin || s.role === "admin" || s.role === "editor_in_chief"
@@ -525,17 +653,19 @@ function verifyDeviceBoundAdminPin(pinRaw) {
     };
   }
 
-  if (bound.adminId === "master-admin" || bound.pressId === "HP10001") {
-    const masterPin = String(state.settings.masterPin || "0000").trim();
-    if (pinClean === masterPin) {
-      return { user: { ...MASTER_ADMIN_DEFAULT } };
-    }
-    return { error: "رمز الدخول السريع (PIN) غير صحيح" };
-  }
-
   const staffAdmin = state.staff.find(
     (s) => s.id === bound.adminId || normalizePressId(s.pressId) === bound.pressId
   );
+
+  if (bound.adminId === "master-admin" || bound.pressId === "HP10001") {
+    const masterPin = String(
+      staffAdmin?.pinCode || state.settings.masterPin || "0000"
+    ).trim();
+    if (pinClean === masterPin) {
+      return { user: { ...MASTER_ADMIN_DEFAULT, ...(staffAdmin || {}) } };
+    }
+    return { error: "رمز الدخول السريع (PIN) غير صحيح" };
+  }
 
   if (!staffAdmin || staffAdmin.accountStatus === "frozen") {
     return { error: "الحساب غير متاح، يرجى الدخول بكلمة المرور" };
@@ -564,18 +694,29 @@ function activateAdminSession(adminObj, cameFromPassword = false) {
   const adminNameEl = document.getElementById("header-admin-name");
   if (adminNameEl) adminNameEl.textContent = adminObj.name || "رئيس التحرير";
 
-  renderAllControlRoomViews();
+  if (typeof renderAllControlRoomViews === "function") {
+    renderAllControlRoomViews();
+  }
 }
 
-function handleAdminLogout() {
+async function requestSafeAdminLogout() {
+  const confirmed = await askAdminConfirmation({
+    title: "تسجيل الخروج من غرفة التحكم",
+    message: "هل تود إغلاق جلسة القيادة الحالية وتسجيل الخروج؟",
+    confirmText: "نعم، تسجيل الخروج",
+    icon: "logout",
+    danger: false
+  });
+  if (!confirmed) return;
+
   state.currentAdmin = null;
   localStorage.removeItem(CR_SESSION_KEY);
   refreshPinLoginUi();
   document.getElementById("cr-auth-gate")?.classList.remove("hidden");
-  showToast("تم تسجيل الخروج من غرفة التحكم العليا");
+  showToast("تم تسجيل الخروج الآمن من غرفة التحكم العليا");
 }
 
-// ==================== 6. الإحصائيات العليا ومركز المراجعات الرباعي (View 1) ====================
+// ==================== 5. الإحصائيات العليا ومركز المراجعات الرباعي + المعاينة الحية ====================
 function renderTopPlatformStats() {
   const pendingPosts = state.posts.filter((p) => p.status === "pending").length;
   const pendingSigs = state.staff.filter((s) => s.signatureStatus === "pending").length;
@@ -596,11 +737,13 @@ function renderTopPlatformStats() {
   setNum("stat-total-staff", state.staff.length);
   setNum("stat-total-views", totalViews);
 
-  const navBadge = document.getElementById("nav-reviews-badge");
-  if (navBadge) {
-    navBadge.textContent = String(totalPendingTasks);
-    navBadge.classList.toggle("hidden", totalPendingTasks === 0);
-  }
+  ["desktop-reviews-badge", "mobile-reviews-badge"].forEach((id) => {
+    const badge = document.getElementById(id);
+    if (badge) {
+      badge.textContent = String(totalPendingTasks);
+      badge.classList.toggle("hidden", totalPendingTasks === 0);
+    }
+  });
 
   setNum("badge-rev-posts", pendingPosts);
   setNum("badge-rev-sigs", pendingSigs);
@@ -608,10 +751,53 @@ function renderTopPlatformStats() {
   setNum("badge-rev-deletes", deleteReqs);
 }
 
+function openAdminPostPreviewModal(postId) {
+  const post = state.posts.find((p) => p.id === postId);
+  if (!post) return;
+
+  state.previewingPostId = post.id;
+  const modal = document.getElementById("cr-preview-modal");
+  const body = document.getElementById("cr-preview-article-body");
+  if (!modal || !body) return;
+
+  const cat = cleanCategoryName(
+    (Array.isArray(post.categories) && post.categories[0]) || post.category || "عام"
+  );
+
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+      <span class="cr-counter-pill">${escapeHtml(cat)}</span>
+      <span style="font-size:0.78rem;color:var(--text-muted);font-weight:800;">
+        الكاتب: <strong>${escapeHtml(post.author || "صحفي")}</strong>
+        ${post.authorPressId ? `(<span dir="ltr">${escapeHtml(post.authorPressId)}</span>)` : ""}
+        • ${formatArabicDate(post)}
+      </span>
+    </div>
+    <h1>${escapeHtml(post.title || "بدون عنوان")}</h1>
+    ${
+      post.summary
+        ? `<div style="padding:12px 14px;background:#fff;border-right:4px solid var(--brand-primary);border-radius:6px;font-weight:700;margin-bottom:16px;">${escapeHtml(
+            post.summary
+          )}</div>`
+        : ""
+    }
+    ${
+      post.imageUrl
+        ? `<img src="${escapeHtml(
+            post.imageUrl
+          )}" alt="" style="width:100%;max-height:420px;object-fit:cover;border-radius:10px;margin-bottom:16px;">`
+        : ""
+    }
+    <div style="font-size:1.05rem;line-height:1.9;">${post.content || ""}</div>
+  `;
+
+  modal.classList.remove("hidden");
+}
+
 function renderReviewsCenterView() {
   renderTopPlatformStats();
 
-  // 1. المنشورات المعلقة بانتظار الاعتماد
+  // 1. مراجعة المنشورات المعلقة
   const postsPane = document.getElementById("rev-pane-posts");
   const pendingPosts = state.posts.filter((p) => p.status === "pending");
 
@@ -636,27 +822,33 @@ function renderReviewsCenterView() {
                     ${formatArabicDate(p)}
                   </span>
                 </div>
-                <h3 style="font-size:1.02rem;font-weight:900;margin-bottom:4px;">${escapeHtml(
+                <h3 style="font-size:1rem;font-weight:900;margin-bottom:4px;">${escapeHtml(
                   p.title
                 )}</h3>
-                <p style="font-size:0.82rem;color:var(--text-muted);font-weight:700;">
+                <p style="font-size:0.81rem;color:var(--text-muted);font-weight:700;">
                   الكاتب: <strong>${escapeHtml(p.author || "صحفي")}</strong>
                   ${p.authorPressId ? `(<span dir="ltr">${escapeHtml(p.authorPressId)}</span>)` : ""}
                 </p>
               </div>
 
-              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
                 <button type="button" class="cr-btn cr-btn-primary cr-btn-sm" data-approve-post="${escapeHtml(
                   p.id
                 )}">
                   <span class="material-symbols-rounded" style="font-size:17px;" translate="no">check_circle</span>
                   <span>اعتماد ونشر فوري</span>
                 </button>
+                <button type="button" class="cr-btn cr-btn-secondary cr-btn-sm" data-preview-post="${escapeHtml(
+                  p.id
+                )}">
+                  <span class="material-symbols-rounded" style="font-size:17px;" translate="no">visibility</span>
+                  <span>معاينة</span>
+                </button>
                 <button type="button" class="cr-btn cr-btn-secondary cr-btn-sm" data-open-edit-post="${escapeHtml(
                   p.id
                 )}">
                   <span class="material-symbols-rounded" style="font-size:17px;" translate="no">edit_document</span>
-                  <span>معاينة وتعديل</span>
+                  <span>تعديل</span>
                 </button>
                 <button type="button" class="cr-btn cr-btn-danger cr-btn-sm" data-reject-post="${escapeHtml(
                   p.id
@@ -672,11 +864,22 @@ function renderReviewsCenterView() {
       postsPane.querySelectorAll("[data-approve-post]").forEach((btn) => {
         btn.addEventListener("click", async () => {
           const id = btn.getAttribute("data-approve-post");
-          await updateDoc(doc(db, "posts", id), {
-            status: "published",
-            approvedAt: Date.now()
-          });
-          showToast("تم اعتماد الخبر ونشره على الموقع العام فوراً");
+          setButtonLoading(btn, true, "جاري النشر...");
+          try {
+            await updateDoc(doc(db, "posts", id), {
+              status: "published",
+              approvedAt: Date.now()
+            });
+            showToast("تم اعتماد الخبر ونشره على الموقع العام فوراً ✓");
+          } catch (_) {
+            setButtonLoading(btn, false);
+          }
+        });
+      });
+
+      postsPane.querySelectorAll("[data-preview-post]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          openAdminPostPreviewModal(btn.getAttribute("data-preview-post"));
         });
       });
 
@@ -689,6 +892,14 @@ function renderReviewsCenterView() {
       postsPane.querySelectorAll("[data-reject-post]").forEach((btn) => {
         btn.addEventListener("click", async () => {
           const id = btn.getAttribute("data-reject-post");
+          const ok = await askAdminConfirmation({
+            title: "إعادة الخبر للمحرر",
+            message: "هل تود إعادة هذه المادة الصحفية إلى المحرر لمراجعتها وتعديلها؟",
+            confirmText: "نعم، إعادة للمحرر",
+            icon: "undo",
+            danger: true
+          });
+          if (!ok) return;
           await updateDoc(doc(db, "posts", id), { status: "rejected" });
           showToast("تمت إعادة المادة للمحرر لمراجعتها");
         });
@@ -732,7 +943,7 @@ function renderReviewsCenterView() {
                     s.id
                   )}">
                     <span class="material-symbols-rounded" style="font-size:17px;" translate="no">verified</span>
-                    <span>اعتماد التوقيع وتفعيل النشر</span>
+                    <span>اعتماد التوقيع وتفعيل الحساب</span>
                   </button>
                   <button type="button" class="cr-btn cr-btn-danger cr-btn-sm" data-reject-sig="${escapeHtml(
                     s.id
@@ -770,18 +981,27 @@ function renderReviewsCenterView() {
       sigsPane.querySelectorAll("[data-approve-sig]").forEach((btn) => {
         btn.addEventListener("click", async () => {
           const sid = btn.getAttribute("data-approve-sig");
+          setButtonLoading(btn, true, "جاري الاعتماد...");
           await updateDoc(doc(db, "staff", sid), {
             signatureStatus: "approved",
             everApprovedCharter: true,
             signatureApprovedAt: Date.now()
           });
-          showToast("تم اعتماد توقيع ميثاق الشرف وتفعيل النشر للصحفي");
+          showToast("تم اعتماد توقيع ميثاق الشرف وتفعيل النشر للصحفي ✓");
         });
       });
 
       sigsPane.querySelectorAll("[data-reject-sig]").forEach((btn) => {
         btn.addEventListener("click", async () => {
           const sid = btn.getAttribute("data-reject-sig");
+          const ok = await askAdminConfirmation({
+            title: "رفض التوقيع وطلب إعادته",
+            message: "هل تود رفض هذا التوقيع ومطالبة الصحفي برسم 3 توقيعات متطابقة من جديد؟",
+            confirmText: "نعم، رفض التوقيع",
+            icon: "draw",
+            danger: true
+          });
+          if (!ok) return;
           await updateDoc(doc(db, "staff", sid), { signatureStatus: "rejected" });
           showToast("تم رفض التوقيع وإشعار الصحفي بإعادة التوقيع الثلاثي");
         });
@@ -789,7 +1009,9 @@ function renderReviewsCenterView() {
 
       sigsPane.querySelectorAll("[data-open-dossier]").forEach((btn) => {
         btn.addEventListener("click", () => {
-          openStaffDossierModal(btn.getAttribute("data-open-dossier"));
+          if (typeof openStaffDossierModal === "function") {
+            openStaffDossierModal(btn.getAttribute("data-open-dossier"));
+          }
         });
       });
 
@@ -801,7 +1023,7 @@ function renderReviewsCenterView() {
     }
   }
 
-  // 3. مراجعة طلبات توثيق الهوية الرسمية والشارة الزرقاء (KYC)
+  // 3. مراجعة طلبات توثيق الهويات الرسمية (KYC)
   const kycPane = document.getElementById("rev-pane-kyc");
   const pendingKyc = state.staff.filter((s) => s.kycStatus === "pending");
 
@@ -823,9 +1045,9 @@ function renderReviewsCenterView() {
                     normalizePressId(s.pressId || "HP")
                   )}</span>
                   <p style="font-size:0.82rem;color:var(--text-muted);font-weight:700;margin-top:4px;">
-                    نوع الوثيقة: ${s.docType === "passport" ? "جواز سفر" : "بطاقة شخصية"} |
+                    الوثيقة: ${s.docType === "passport" ? "جواز سفر" : "بطاقة شخصية"} |
                     رقمها: <strong>${escapeHtml(s.docNumber || "-")}</strong> |
-                    تاريخ الإصدار: ${escapeHtml(s.docIssueDate || "-")} |
+                    إصدار: ${escapeHtml(s.docIssueDate || "-")} |
                     العمر التلقائي: <strong style="color:var(--brand-primary);">${
                       age !== null ? `${age} سنة` : "-"
                     }</strong>
@@ -846,7 +1068,7 @@ function renderReviewsCenterView() {
                   <button type="button" class="cr-btn cr-btn-secondary cr-btn-sm" data-open-dossier="${escapeHtml(
                     s.id
                   )}">
-                    <span>فتح الملف الشامل</span>
+                    <span>الملف الشامل</span>
                   </button>
                 </div>
               </div>
@@ -881,19 +1103,28 @@ function renderReviewsCenterView() {
       kycPane.querySelectorAll("[data-approve-kyc]").forEach((btn) => {
         btn.addEventListener("click", async () => {
           const sid = btn.getAttribute("data-approve-kyc");
+          setButtonLoading(btn, true, "جاري التوثيق...");
           await updateDoc(doc(db, "staff", sid), {
             kycStatus: "approved",
             verified: true,
             signatureStatus: "approved",
             everApprovedCharter: true
           });
-          showToast("تم توثيق هوية الصحفي ومنحه الشارة الزرقاء المعتمدة");
+          showToast("تم توثيق هوية الصحفي ومنحه الشارة الزرقاء المعتمدة ✓");
         });
       });
 
       kycPane.querySelectorAll("[data-reject-kyc]").forEach((btn) => {
         btn.addEventListener("click", async () => {
           const sid = btn.getAttribute("data-reject-kyc");
+          const ok = await askAdminConfirmation({
+            title: "رفض طلب توثيق الهوية",
+            message: "هل تود رفض الوثائق المرفوعة ومطالبة الصحفي بإعادة رفع صور واضحة؟",
+            confirmText: "نعم، رفض الطلب",
+            icon: "cancel",
+            danger: true
+          });
+          if (!ok) return;
           await updateDoc(doc(db, "staff", sid), { kycStatus: "rejected" });
           showToast("تم رفض طلب التوثيق");
         });
@@ -901,7 +1132,9 @@ function renderReviewsCenterView() {
 
       kycPane.querySelectorAll("[data-open-dossier]").forEach((btn) => {
         btn.addEventListener("click", () => {
-          openStaffDossierModal(btn.getAttribute("data-open-dossier"));
+          if (typeof openStaffDossierModal === "function") {
+            openStaffDossierModal(btn.getAttribute("data-open-dossier"));
+          }
         });
       });
 
@@ -913,7 +1146,7 @@ function renderReviewsCenterView() {
     }
   }
 
-  // 4. مراجعة طلبات الحذف المرفوعة من الكتّاب
+  // 4. مراجعة طلبات الحذف (Soft Delete Requests) مع عرض سبب الحذف المكتوب من الصحفي
   const deletesPane = document.getElementById("rev-pane-deletes");
   const deleteReqs = state.posts.filter((p) => p.status === "delete_request");
 
@@ -925,22 +1158,34 @@ function renderReviewsCenterView() {
         .map(
           (p) => `
           <div class="cr-row-card">
-            <div>
-              <span class="cr-status-badge st-rejected">طلب حذف من الكاتب</span>
-              <h3 style="font-size:1rem;font-weight:900;margin-top:5px;">${escapeHtml(p.title)}</h3>
-              <p style="font-size:0.82rem;color:var(--text-muted);">الكاتب: ${escapeHtml(
-                p.author || "-"
-              )}</p>
+            <div style="flex:1;min-width:240px;">
+              <span class="cr-status-badge st-rejected">طلب حذف (مخفي حالياً من الموقع العام)</span>
+              <h3 style="font-size:1rem;font-weight:900;margin-top:6px;">${escapeHtml(p.title)}</h3>
+              <p style="font-size:0.82rem;color:var(--text-muted);font-weight:700;margin-top:3px;">
+                الكاتب: <strong>${escapeHtml(p.author || "-")}</strong>
+                ${p.authorPressId ? `(<span dir="ltr">${escapeHtml(p.authorPressId)}</span>)` : ""}
+              </p>
+              <div style="margin-top:6px;padding:7px 11px;background:#fef2f2;border-right:3px solid var(--danger-red);border-radius:6px;font-size:0.8rem;font-weight:800;color:var(--danger-red);">
+                سبب طلب الحذف: ${escapeHtml(p.deleteReason || "لم يذكر الكاتب سبباً محدداً")}
+              </div>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button type="button" class="cr-btn cr-btn-secondary cr-btn-sm" data-preview-post="${escapeHtml(
+                p.id
+              )}">
+                <span class="material-symbols-rounded" style="font-size:17px;" translate="no">visibility</span>
+                <span>معاينة</span>
+              </button>
               <button type="button" class="cr-btn cr-btn-secondary cr-btn-sm" data-restore-post="${escapeHtml(
                 p.id
               )}">
+                <span class="material-symbols-rounded" style="font-size:17px;" translate="no">restore</span>
                 <span>رفض الحذف وإعادة النشر</span>
               </button>
               <button type="button" class="cr-btn cr-btn-danger cr-btn-sm" data-confirm-delete-post="${escapeHtml(
                 p.id
               )}">
+                <span class="material-symbols-rounded" style="font-size:17px;" translate="no">delete_forever</span>
                 <span>تأكيد الحذف النهائي</span>
               </button>
             </div>
@@ -949,26 +1194,43 @@ function renderReviewsCenterView() {
         )
         .join("")}</div>`;
 
+      deletesPane.querySelectorAll("[data-preview-post]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          openAdminPostPreviewModal(btn.getAttribute("data-preview-post"));
+        });
+      });
+
       deletesPane.querySelectorAll("[data-restore-post]").forEach((btn) => {
         btn.addEventListener("click", async () => {
           const id = btn.getAttribute("data-restore-post");
-          await updateDoc(doc(db, "posts", id), { status: "published" });
-          showToast("تم رفض الحذف وإعادة المنشور للموقع العام");
+          await updateDoc(doc(db, "posts", id), {
+            status: "published",
+            deleteReason: ""
+          });
+          showToast("تم رفض الحذف وإعادة نشر الخبر على الموقع العام ✓");
         });
       });
 
       deletesPane.querySelectorAll("[data-confirm-delete-post]").forEach((btn) => {
         btn.addEventListener("click", async () => {
           const id = btn.getAttribute("data-confirm-delete-post");
+          const ok = await askAdminConfirmation({
+            title: "تأكيد الحذف النهائي",
+            message: "سيتم مسح هذا الخبر نهائياً من قاعدة البيانات ولا يمكن استعادته. هل أنت متأكد؟",
+            confirmText: "نعم، حذف نهائي",
+            icon: "delete_forever",
+            danger: true
+          });
+          if (!ok) return;
           await deleteDoc(doc(db, "posts", id));
-          showToast("تم حذف المنشور نهائياً");
+          showToast("تم حذف الخبر نهائياً من المنصة");
         });
       });
     }
   }
 }
 
-// ==================== 7. إدارة كافة الأخبار والتحكم الفوري بالأولويات (View 2) ====================
+// ==================== 6. إدارة كافة الأخبار + الترقيم الذكي + المحرر الشامل ====================
 function populatePostsCategoryFilterDropdown() {
   const sel = document.getElementById("all-posts-category-filter");
   const modalCatSel = document.getElementById("admin-post-category");
@@ -1005,9 +1267,21 @@ function getStatusBadgeHtml(status) {
   return `<span class="cr-status-badge st-draft">مسودة</span>`;
 }
 
+// فحص آلي لإلغاء شارة (عاجل) عن الأخبار التي انتهت صلاحية الـ 6 ساعات الخاصة بها
+function checkAndExpireOldBreakingPosts() {
+  const now = Date.now();
+  state.posts.forEach((p) => {
+    if (p.isBreaking && p.breakingExpiresAt && Number(p.breakingExpiresAt) < now) {
+      p.isBreaking = false;
+      updateDoc(doc(db, "posts", p.id), { isBreaking: false }).catch(() => {});
+    }
+  });
+}
+
 function renderAllPostsManagementView() {
   populatePostsCategoryFilterDropdown();
   const container = document.getElementById("admin-all-posts-list");
+  const paginationBar = document.getElementById("admin-posts-pagination");
   if (!container) return;
 
   let list = [...state.posts];
@@ -1034,21 +1308,45 @@ function renderAllPostsManagementView() {
   }
 
   if (state.postsSearchQuery) {
-    const q = state.postsSearchQuery.toLowerCase();
-    list = list.filter((p) =>
-      `${p.title || ""} ${p.summary || ""} ${p.author || ""} ${p.authorPressId || ""}`
-        .toLowerCase()
-        .includes(q)
-    );
+    const terms = state.postsSearchQuery
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean);
+    list = list.filter((p) => {
+      const hay = `${p.title || ""} ${p.summary || ""} ${p.author || ""} ${
+        p.authorPressId || ""
+      } ${p.category || ""}`.toLowerCase();
+      return terms.every((t) => hay.includes(t));
+    });
   }
 
   if (!list.length) {
     container.innerHTML = `<div class="cr-empty-box"><p>لا توجد أخبار مطابقة لمعايير التصفية الحالية.</p></div>`;
+    paginationBar?.classList.add("hidden");
     return;
   }
 
-  container.innerHTML = list
-    .slice(0, 60)
+  const totalPages = Math.max(1, Math.ceil(list.length / POSTS_PER_PAGE));
+  if (state.postsCurrentPage > totalPages) state.postsCurrentPage = totalPages;
+  if (state.postsCurrentPage < 1) state.postsCurrentPage = 1;
+
+  const startIdx = (state.postsCurrentPage - 1) * POSTS_PER_PAGE;
+  const pageItems = list.slice(startIdx, startIdx + POSTS_PER_PAGE);
+
+  if (paginationBar) {
+    paginationBar.classList.toggle("hidden", totalPages <= 1);
+    const infoEl = document.getElementById("posts-page-info-label");
+    const prevBtn = document.getElementById("posts-page-prev-btn");
+    const nextBtn = document.getElementById("posts-page-next-btn");
+
+    if (infoEl) {
+      infoEl.textContent = `صفحة ${state.postsCurrentPage} من ${totalPages} (إجمالي ${list.length} خبر)`;
+    }
+    if (prevBtn) prevBtn.disabled = state.postsCurrentPage <= 1;
+    if (nextBtn) nextBtn.disabled = state.postsCurrentPage >= totalPages;
+  }
+
+  container.innerHTML = pageItems
     .map((p) => {
       const cat = cleanCategoryName(
         (Array.isArray(p.categories) && p.categories[0]) || p.category || "عام"
@@ -1060,21 +1358,20 @@ function renderAllPostsManagementView() {
           <div style="flex:1;min-width:250px;">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px;">
               ${getStatusBadgeHtml(p.status)}
-              <span style="font-size:0.75rem;font-weight:800;color:var(--brand-primary);background:var(--brand-soft);padding:2px 8px;border-radius:5px;">
+              <span style="font-size:0.74rem;font-weight:800;color:var(--brand-primary);background:var(--brand-soft);padding:2px 8px;border-radius:5px;">
                 ${escapeHtml(cat)}
               </span>
-              <span style="font-size:0.75rem;color:var(--text-muted);font-weight:700;">
+              <span style="font-size:0.74rem;color:var(--text-muted);font-weight:700;">
                 الكاتب: <strong>${escapeHtml(p.author || "هيئة التحرير")}</strong>
                 ${p.authorPressId ? `(<span dir="ltr">${escapeHtml(p.authorPressId)}</span>)` : ""}
                 • ${formatArabicDate(p)} • ${views} قراءة
               </span>
             </div>
-            <h3 style="font-size:1rem;font-weight:900;color:var(--text-main);">
+            <h3 style="font-size:0.98rem;font-weight:900;color:var(--text-main);">
               ${escapeHtml(p.title || "بدون عنوان")}
             </h3>
           </div>
 
-          <!-- أزرار التحكم الفوري بأولوية الظهور بنقرة واحدة + زر التعديل الشامل -->
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <div class="cr-priority-toggles">
               <button
@@ -1082,7 +1379,7 @@ function renderAllPostsManagementView() {
                 class="cr-prio-chip ${p.isBreaking ? "active" : ""}"
                 data-toggle-prio="isBreaking"
                 data-post-id="${escapeHtml(p.id)}"
-                title="إضافة أو سحب الخبر فوراً من شريط الأخبار العاجلة"
+                title="تفعيل أو سحب الخبر فوراً من شريط الأخبار العاجلة"
               >
                 <span class="material-symbols-rounded" style="font-size:15px;" translate="no">campaign</span>
                 <span>عاجل</span>
@@ -1093,7 +1390,7 @@ function renderAllPostsManagementView() {
                 class="cr-prio-chip ${p.isFeatured ? "active" : ""}"
                 data-toggle-prio="isFeatured"
                 data-post-id="${escapeHtml(p.id)}"
-                title="إضافة أو سحب الخبر من التغطية الرئيسية الكبرى"
+                title="تفعيل أو سحب الخبر من الواجهة الرئيسية الكبرى"
               >
                 <span class="material-symbols-rounded" style="font-size:15px;" translate="no">star</span>
                 <span>واجهة كبرى</span>
@@ -1104,7 +1401,7 @@ function renderAllPostsManagementView() {
                 class="cr-prio-chip ${p.isQuickNews ? "active" : ""}"
                 data-toggle-prio="isQuickNews"
                 data-post-id="${escapeHtml(p.id)}"
-                title="إضافة أو سحب الخبر من شريط موجز النبض"
+                title="تفعيل أو سحب الخبر من موجز النبض"
               >
                 <span class="material-symbols-rounded" style="font-size:15px;" translate="no">bolt</span>
                 <span>النبض</span>
@@ -1125,7 +1422,6 @@ function renderAllPostsManagementView() {
     })
     .join("");
 
-  // تبديل أولوية الخبر (عاجل / رئيسية / نبض) بنقرة واحدة
   container.querySelectorAll("[data-toggle-prio]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const postId = btn.getAttribute("data-post-id");
@@ -1143,8 +1439,8 @@ function renderAllPostsManagementView() {
         await updateDoc(doc(db, "posts", postId), updateObj);
         showToast(
           nextVal
-            ? "تم تفعيل أولوية الظهور للخبر فوراً"
-            : "تم سحب الخبر من أولوية الظهور فوراً"
+            ? "تم تفعيل أولوية الظهور للخبر فوراً ✓"
+            : "تم سحب الخبر من أولوية الظهور فوراً ✓"
         );
       } catch (_) {
         showToast("تعذر تحديث أولوية الخبر");
@@ -1164,7 +1460,7 @@ function openMasterPostEditorModal(postId) {
   if (!post) return;
 
   populatePostsCategoryFilterDropdown();
-  state.editPostImageTempData = post.imageUrl || "";
+  state.editPostImageTempUrl = post.imageUrl || "";
 
   const setVal = (id, val) => {
     const el = document.getElementById(id);
@@ -1180,8 +1476,12 @@ function openMasterPostEditorModal(postId) {
   );
   setVal("admin-post-category", mainCat);
   setVal("admin-post-subcategory", post.subcategory || "");
+  // الحفاظ الصارم على حالة الخبر الحالية تلقائياً لمنع نشر خبر معلق بالخطأ
   setVal("admin-post-status", post.status || "published");
-  setVal("admin-post-image-url", post.imageUrl && !post.imageUrl.startsWith("data:") ? post.imageUrl : "");
+  setVal(
+    "admin-post-image-url",
+    post.imageUrl && !post.imageUrl.startsWith("data:") ? post.imageUrl : ""
+  );
   setVal(
     "admin-post-tags",
     Array.isArray(post.tags)
@@ -1203,8 +1503,8 @@ function openMasterPostEditorModal(postId) {
   document.getElementById("edit-post-modal")?.classList.remove("hidden");
 }
 
-async function handleSaveMasterPostEdits(e) {
-  e.preventDefault();
+async function handleSaveMasterPostEdits(e, forcePublishNow = false) {
+  if (e) e.preventDefault();
   const postId = document.getElementById("admin-edit-post-id")?.value;
   if (!postId) return;
 
@@ -1214,7 +1514,9 @@ async function handleSaveMasterPostEdits(e) {
     (document.getElementById("admin-post-category")?.value || "").trim()
   );
   const subcategory = (document.getElementById("admin-post-subcategory")?.value || "").trim();
-  const status = document.getElementById("admin-post-status")?.value || "published";
+  const status = forcePublishNow
+    ? "published"
+    : document.getElementById("admin-post-status")?.value || "published";
   const urlInput = (document.getElementById("admin-post-image-url")?.value || "").trim();
   const rawTags = (document.getElementById("admin-post-tags")?.value || "").trim();
   const videoUrl = (document.getElementById("admin-post-video-url")?.value || "").trim();
@@ -1237,7 +1539,7 @@ async function handleSaveMasterPostEdits(e) {
     categories: [category],
     subcategory,
     status,
-    imageUrl: urlInput || state.editPostImageTempData || "",
+    imageUrl: urlInput || state.editPostImageTempUrl || "",
     tags,
     videoUrl,
     videoType: videoUrl
@@ -1253,1403 +1555,22 @@ async function handleSaveMasterPostEdits(e) {
     updatedAt: Date.now()
   };
 
+  setButtonLoading("admin-save-post-btn", true, "جاري حفظ التعديلات...");
+
   try {
     await updateDoc(doc(db, "posts", postId), payload);
     document.getElementById("edit-post-modal")?.classList.add("hidden");
-    showToast("تم حفظ التعديلات وتحديث حالة الخبر بنجاح");
+    showToast(
+      forcePublishNow
+        ? "تم حفظ التعديلات واعتماد نشر الخبر فوراً ✓"
+        : "تم حفظ تعديلات الخبر بنجاح ✓"
+    );
   } catch (err) {
     console.error(err);
     showToast("تعذر حفظ التعديلات");
+  } finally {
+    setButtonLoading("admin-save-post-btn", false);
   }
 }
 
-// ==================== 8. إدارة الكادر الصحفي والملف الشخصي الشامل (God Mode Dossier — View 3) ====================
-function renderAllowedCategoriesCheckboxes(containerId, selectedArray = ["all"]) {
-  const box = document.getElementById(containerId);
-  if (!box) return;
-
-  const sortedCats = [...state.compasses].sort((a, b) => (a.order || 99) - (b.order || 99));
-  const normalizedSelected = (selectedArray || []).map((x) => cleanCategoryName(x));
-
-  box.innerHTML = sortedCats
-    .map((c) => {
-      const clean = cleanCategoryName(c.name);
-      const isChecked =
-        normalizedSelected.includes("all") ||
-        normalizedSelected.includes(clean) ||
-        normalizedSelected.includes(c.id);
-      return `
-        <label class="cr-chip-checkbox">
-          <input type="checkbox" value="${escapeHtml(clean)}" class="specific-cat-chk" ${
-        isChecked ? "checked" : ""
-      }>
-          <span>${escapeHtml(clean)}</span>
-        </label>
-      `;
-    })
-    .join("");
-}
-
-function renderStaffDirectoryView() {
-  const grid = document.getElementById("admin-staff-grid");
-  if (!grid) return;
-
-  const q = state.staffSearchQuery.toLowerCase();
-  const qPid = normalizePressId(state.staffSearchQuery);
-
-  const filtered = state.staff.filter((s) => {
-    if (!q) return true;
-    const sPid = normalizePressId(s.pressId || "");
-    const hay = `${s.name || ""} ${s.legalName || ""} ${s.username || ""} ${
-      s.jobTitle || ""
-    } ${s.whatsapp || ""} ${s.contactEmail || ""}`.toLowerCase();
-    return hay.includes(q) || (qPid && sPid.includes(qPid));
-  });
-
-  if (!filtered.length) {
-    grid.innerHTML = `<div class="cr-empty-box" style="grid-column:1/-1;"><p>لا يوجد صحفي مطابق لبحثك.</p></div>`;
-    return;
-  }
-
-  grid.innerHTML = filtered
-    .map((s) => {
-      const pid = normalizePressId(s.pressId || "HP");
-      const age = calculateAutoAge(s.dob);
-      const isFrozen = s.accountStatus === "frozen" || s.suspended === true;
-      const avatar =
-        s.avatar ||
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(
-          s.name || "HP"
-        )}&background=b80d38&color=fff`;
-
-      const postCount = state.posts.filter(
-        (p) => p.authorId === s.id || p.author === s.name
-      ).length;
-
-      const allowedCatsLabel =
-        !Array.isArray(s.allowedCategories) ||
-        !s.allowedCategories.length ||
-        s.allowedCategories.includes("all")
-          ? "جميع الأقسام"
-          : `${s.allowedCategories.length} قسم مخصص`;
-
-      return `
-        <article class="cr-staff-card ${isFrozen ? "frozen-card" : ""}" data-open-staff="${escapeHtml(
-          s.id
-        )}">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-            <img src="${escapeHtml(avatar)}" alt="" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid var(--brand-primary);flex-shrink:0;">
-            <div style="flex:1;min-width:0;">
-              <div style="display:flex;align-items:center;gap:4px;">
-                <h3 style="font-size:0.96rem;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(
-                  s.name
-                )}</h3>
-                ${
-                  s.verified
-                    ? `<span class="material-symbols-rounded" style="color:var(--verified-blue);font-size:18px;" translate="no">verified</span>`
-                    : ""
-                }
-              </div>
-              <span style="font-size:0.76rem;color:var(--text-muted);font-weight:700;display:block;">
-                ${escapeHtml(s.jobTitle || "صحفي")} • ${
-        isFrozen ? `<strong style="color:var(--danger-red);">مجمد</strong>` : "نشط"
-      }
-              </span>
-            </div>
-            <span class="cr-press-id-tag" dir="ltr">${escapeHtml(pid)}</span>
-          </div>
-
-          <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;font-weight:800;color:var(--text-body);padding-top:10px;border-top:1px solid var(--border-light);">
-            <span>الأقسام: ${escapeHtml(allowedCatsLabel)}</span>
-            <span>${age !== null ? `العمر: ${age} سنة` : `مقالات: ${postCount}`}</span>
-            <span style="color:var(--brand-primary);">التحكم الكامل ←</span>
-          </div>
-        </article>
-      `;
-    })
-    .join("");
-
-  grid.querySelectorAll("[data-open-staff]").forEach((card) => {
-    card.addEventListener("click", () => {
-      openStaffDossierModal(card.getAttribute("data-open-staff"));
-    });
-  });
-}
-
-// فتح نافذة الملف الشخصي الشامل والتحكم المطلق ببيانات الصحفي (God Mode Dossier)
-function openStaffDossierModal(staffId) {
-  const member = state.staff.find((s) => s.id === staffId);
-  if (!member) return;
-
-  state.activeDossierStaffId = member.id;
-  state.dossierAvatarTempData = member.avatar || "";
-
-  const modal = document.getElementById("staff-dossier-modal");
-  const content = document.getElementById("dossier-modal-content");
-  if (!modal || !content) return;
-
-  const pid = normalizePressId(member.pressId || "HP");
-  const age = calculateAutoAge(member.dob);
-  const isFrozen = member.accountStatus === "frozen" || member.suspended === true;
-  const avatar =
-    member.avatar ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      member.name || "HP"
-    )}&background=b80d38&color=fff`;
-
-  const memberPosts = state.posts.filter(
-    (p) => p.authorId === member.id || p.author === member.name
-  );
-  const pubCount = memberPosts.filter((p) => !p.status || p.status === "published").length;
-  const totalViews = memberPosts.reduce((sum, p) => sum + Number(p.views || 0), 0);
-
-  const waDigits = String(member.whatsapp || "").replace(/[^\d]/g, "");
-  const emailAddr = (member.contactEmail || member.email || "").trim();
-
-  const isAllCats =
-    !Array.isArray(member.allowedCategories) ||
-    !member.allowedCategories.length ||
-    member.allowedCategories.includes("all");
-
-  const sigList = Array.isArray(member.signatures)
-    ? member.signatures
-    : member.primarySignature
-    ? [member.primarySignature]
-    : [];
-
-  content.innerHTML = `
-    <!-- 1. الشريط العلوي للهوية الصحفية والعمر التلقائي وأزرار التواصل المباشر -->
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;background:var(--bg-page);padding:16px;border-radius:12px;border:1px solid var(--border-light);margin-bottom:18px;">
-      <div style="display:flex;align-items:center;gap:14px;">
-        <img id="dossier-avatar-preview" src="${escapeHtml(
-          avatar
-        )}" alt="" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:3px solid var(--brand-primary);">
-        <div>
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <h3 style="font-size:1.2rem;font-weight:900;">${escapeHtml(member.name)}</h3>
-            <span class="cr-press-id-tag" dir="ltr">${escapeHtml(pid)}</span>
-            <button type="button" id="dossier-copy-pid-btn" class="cr-btn cr-btn-secondary cr-btn-sm">نسخ الهوية</button>
-          </div>
-          <p style="font-size:0.83rem;color:var(--text-muted);font-weight:800;margin-top:4px;">
-            العمر المحسوب تلقائياً: <strong style="color:var(--brand-primary);">${
-              age !== null ? `${age} سنة` : "غير محدد"
-            }</strong>
-            • المنشورات: <strong>${pubCount}</strong> • المشاهدات: <strong>${totalViews.toLocaleString(
-              "en-US"
-            )}</strong>
-          </p>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        ${
-          waDigits.length >= 7
-            ? `<a href="https://wa.me/${waDigits}" target="_blank" rel="noopener" class="cr-btn cr-btn-secondary cr-btn-sm" style="background:#dcfce7;color:#15803d;border-color:#86efac;text-decoration:none;">
-                <span class="material-symbols-rounded" style="font-size:18px;" translate="no">chat</span>
-                <span>مراسلة واتساب (${escapeHtml(member.whatsapp)})</span>
-              </a>`
-            : ""
-        }
-        ${
-          emailAddr
-            ? `<a href="mailto:${encodeURIComponent(
-                emailAddr
-              )}" class="cr-btn cr-btn-secondary cr-btn-sm" style="text-decoration:none;">
-                <span class="material-symbols-rounded" style="font-size:18px;" translate="no">mail</span>
-                <span>مراسلة بريد (${escapeHtml(emailAddr)})</span>
-              </a>`
-            : ""
-        }
-      </div>
-    </div>
-
-    <!-- 2. أزرار القرارات السيادية الفورية (تجميد الحساب، الشارة الزرقاء، النشر المباشر، اعتماد الميثاق) -->
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border-light);">
-      <button type="button" id="dossier-toggle-freeze-btn" class="cr-btn ${
-        isFrozen ? "cr-btn-primary" : "cr-btn-danger"
-      } cr-btn-sm">
-        <span class="material-symbols-rounded" style="font-size:17px;" translate="no">${
-          isFrozen ? "lock_open" : "block"
-        }</span>
-        <span>${isFrozen ? "إلغاء التجميد وتفعيل الحساب" : "تجميد وإيقاف الحساب فوراً"}</span>
-      </button>
-
-      <button type="button" id="dossier-toggle-verified-btn" class="cr-btn cr-btn-secondary cr-btn-sm">
-        <span class="material-symbols-rounded" style="font-size:17px;color:var(--verified-blue);" translate="no">verified</span>
-        <span>${member.verified ? "سحب الشارة الزرقاء" : "منح الشارة الزرقاء فوراً"}</span>
-      </button>
-
-      <button type="button" id="dossier-toggle-direct-btn" class="cr-btn cr-btn-secondary cr-btn-sm">
-        <span class="material-symbols-rounded" style="font-size:17px;" translate="no">bolt</span>
-        <span>${
-          member.directPublish ? "تحويل إلى (يخضع للمراجعة)" : "منح صلاحية النشر المباشر"
-        }</span>
-      </button>
-
-      <button type="button" id="dossier-approve-charter-btn" class="cr-btn cr-btn-secondary cr-btn-sm">
-        <span class="material-symbols-rounded" style="font-size:17px;" translate="no">gavel</span>
-        <span>اعتماد توقيع الميثاق</span>
-      </button>
-
-      <button type="button" id="dossier-reject-charter-btn" class="cr-btn cr-btn-danger cr-btn-sm">
-        <span>طلب إعادة توقيع الميثاق</span>
-      </button>
-    </div>
-
-    <!-- 3. استمارة التحكم الشامل ببيانات الصحفي وكلمة مروره وأقسامه المسموحة -->
-    <form id="cr-dossier-edit-form" style="background:var(--bg-page);padding:18px;border-radius:12px;border:1px solid var(--border-light);margin-bottom:20px;">
-      <h4 style="font-weight:900;margin-bottom:14px;color:var(--brand-primary);">
-        تعديل بيانات الصحفي، كلمة المرور، الصورة، وتخصيص الأقسام المسموحة
-      </h4>
-
-      <div class="cr-grid-3">
-        <div class="cr-field">
-          <label>الاسم الصحفي الظاهر</label>
-          <input type="text" id="dos-name" class="cr-input" required value="${escapeHtml(
-            member.name || ""
-          )}">
-        </div>
-        <div class="cr-field">
-          <label>المسمى الوظيفي</label>
-          <input type="text" id="dos-job" class="cr-input" value="${escapeHtml(
-            member.jobTitle || ""
-          )}">
-        </div>
-        <div class="cr-field">
-          <label>مستوى الصلاحية</label>
-          <select id="dos-role" class="cr-select">
-            <option value="writer" ${member.role === "writer" ? "selected" : ""}>صحفي (يخضع للمراجعة)</option>
-            <option value="trusted_writer" ${
-              member.role === "trusted_writer" ? "selected" : ""
-            }>صحفي معتمد (نشر مباشر)</option>
-            <option value="admin" ${member.role === "admin" ? "selected" : ""}>مدير تحرير / أدمن</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="cr-grid-3">
-        <div class="cr-field">
-          <label>اسم المستخدم للدخول</label>
-          <input type="text" id="dos-username" class="cr-input" dir="ltr" required value="${escapeHtml(
-            member.username || ""
-          )}">
-        </div>
-        <div class="cr-field">
-          <label>كلمة المرور (يمكنك تغييرها له في أي وقت)</label>
-          <input type="text" id="dos-password" class="cr-input" dir="ltr" required value="${escapeHtml(
-            member.password || ""
-          )}">
-        </div>
-        <div class="cr-field">
-          <label>الرمز السريع (PIN)</label>
-          <input type="text" id="dos-pin" class="cr-input" dir="ltr" maxlength="8" value="${escapeHtml(
-            member.pinCode || member.pin || ""
-          )}">
-        </div>
-      </div>
-
-      <div class="cr-grid-3">
-        <div class="cr-field">
-          <label>رقم الواتساب</label>
-          <input type="tel" id="dos-whatsapp" class="cr-input" dir="ltr" value="${escapeHtml(
-            member.whatsapp || ""
-          )}">
-        </div>
-        <div class="cr-field">
-          <label>البريد الإلكتروني للتواصل</label>
-          <input type="email" id="dos-email" class="cr-input" dir="ltr" value="${escapeHtml(
-            emailAddr
-          )}">
-        </div>
-        <div class="cr-field">
-          <label>تغيير الصورة الشخصية للصحفي</label>
-          <input type="file" id="dos-avatar-file" accept="image/*" class="cr-input">
-        </div>
-      </div>
-
-      <!-- التحكم الدقيق بالأقسام المسموح للصحفي بالنشر فيها -->
-      <div class="cr-field">
-        <label>الأقسام المسموح لهذا الصحفي بالنشر فيها (تظهر له وحده في غرفة الأخبار)</label>
-        <label class="cr-chip-checkbox" style="margin-bottom:10px;background:#fff;border-color:var(--brand-border);">
-          <input type="checkbox" id="dos-all-cats-chk" ${isAllCats ? "checked" : ""}>
-          <strong>السماح بالنشر في جميع أقسام المنصة</strong>
-        </label>
-        <div id="dos-specific-cats-grid" class="cr-cats-checkbox-grid ${
-          isAllCats ? "hidden" : ""
-        }"></div>
-      </div>
-
-      <div class="cr-pane-footer cr-footer-split" style="margin-top:12px;">
-        <button type="button" id="dossier-delete-staff-btn" class="cr-btn cr-btn-danger cr-btn-sm">
-          <span class="material-symbols-rounded" style="font-size:17px;" translate="no">person_remove</span>
-          <span>حذف حساب الصحفي نهائياً</span>
-        </button>
-
-        <button type="submit" class="cr-btn cr-btn-primary">
-          <span class="material-symbols-rounded" translate="no">save</span>
-          <span>حفظ كافة تعديلات الحساب والصلاحيات والأقسام</span>
-        </button>
-      </div>
-    </form>
-
-    <!-- 4. استعراض وثائق الهوية الرسمية (KYC) والتوقيعات الثلاثة المحفوظة -->
-    <div class="cr-grid-2">
-      <div style="background:#fff;padding:14px;border-radius:10px;border:1px solid var(--border-light);">
-        <h4 style="font-weight:900;margin-bottom:8px;">وثائق الهوية الرسمية المرفقة (KYC)</h4>
-        <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px;">
-          الاسم القانوني: <strong>${escapeHtml(member.legalName || "-")}</strong> |
-          رقم الوثيقة: <strong>${escapeHtml(member.docNumber || "-")}</strong> |
-          إصدار: ${escapeHtml(member.docIssueDate || "-")} |
-          ميلاد: ${escapeHtml(member.dob || "-")}
-        </p>
-        <div class="cr-sig-grid">
-          ${
-            member.docFrontImg
-              ? `<div class="cr-sig-box"><small>وجه الوثيقة</small><img src="${escapeHtml(
-                  member.docFrontImg
-                )}" data-zoom-img="${escapeHtml(member.docFrontImg)}"></div>`
-              : ""
-          }
-          ${
-            member.docBackImg
-              ? `<div class="cr-sig-box"><small>ظهر الوثيقة</small><img src="${escapeHtml(
-                  member.docBackImg
-                )}" data-zoom-img="${escapeHtml(member.docBackImg)}"></div>`
-              : ""
-          }
-          ${
-            member.selfieImg
-              ? `<div class="cr-sig-box"><small>صورة السيلفي</small><img src="${escapeHtml(
-                  member.selfieImg
-                )}" data-zoom-img="${escapeHtml(member.selfieImg)}"></div>`
-              : ""
-          }
-        </div>
-      </div>
-
-      <div style="background:#fff;padding:14px;border-radius:10px;border:1px solid var(--border-light);">
-        <h4 style="font-weight:900;margin-bottom:8px;">
-          توقيعات ميثاق الشرف الصحفي (الحالة: ${escapeHtml(
-            member.signatureStatus || "لم يوقع"
-          )} — الإصدار: ${member.signedCharterVersion || 0})
-        </h4>
-        <div class="cr-sig-grid">
-          ${
-            sigList.length
-              ? sigList
-                  .map(
-                    (imgUrl, i) => `
-                  <div class="cr-sig-box">
-                    <small>نموذج التوقيع (${i + 1})</small>
-                    <img src="${escapeHtml(imgUrl)}" data-zoom-img="${escapeHtml(imgUrl)}">
-                  </div>
-                `
-                  )
-                  .join("")
-              : `<p style="font-size:0.82rem;color:var(--text-muted);">لا توجد توقيعات محفوظة بعد.</p>`
-          }
-        </div>
-      </div>
-    </div>
-  `;
-
-  modal.classList.remove("hidden");
-
-  // تعبئة مربعات اختيار الأقسام المخصصة داخل الدوسيه
-  renderAllowedCategoriesCheckboxes(
-    "dos-specific-cats-grid",
-    member.allowedCategories || ["all"]
-  );
-
-  const allCatsChk = document.getElementById("dos-all-cats-chk");
-  const specGrid = document.getElementById("dos-specific-cats-grid");
-  allCatsChk?.addEventListener("change", () => {
-    specGrid?.classList.toggle("hidden", allCatsChk.checked);
-  });
-
-  // نسخ رقم الهوية الصحفية
-  document.getElementById("dossier-copy-pid-btn")?.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(pid);
-      showToast(`تم نسخ رقم الهوية الصحفية: ${pid}`);
-    } catch (_) {}
-  });
-
-  // رفع صورة شخصية جديدة للصحفي من الدوسيه
-  document.getElementById("dos-avatar-file")?.addEventListener("change", async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const webp = await compressImageToWebp(file, 500, 0.82);
-      state.dossierAvatarTempData = webp;
-      document.getElementById("dossier-avatar-preview")?.setAttribute("src", webp);
-      showToast("تم تجهيز الصورة الجديدة — اضغط حفظ لتثبيتها");
-    } catch (_) {}
-  });
-
-  // أزرار القرارات الفورية في الدوسيه
-  document.getElementById("dossier-toggle-freeze-btn")?.addEventListener("click", async () => {
-    const nextStatus = isFrozen ? "active" : "frozen";
-    await updateDoc(doc(db, "staff", member.id), {
-      accountStatus: nextStatus,
-      suspended: !isFrozen
-    });
-    showToast(
-      nextStatus === "frozen"
-        ? "تم تجميد حساب الصحفي ومنعه من الدخول فوراً"
-        : "تم إلغاء التجميد وتفعيل حساب الصحفي"
-    );
-    openStaffDossierModal(member.id);
-  });
-
-  document.getElementById("dossier-toggle-verified-btn")?.addEventListener("click", async () => {
-    const nextVer = !Boolean(member.verified);
-    await updateDoc(doc(db, "staff", member.id), {
-      verified: nextVer,
-      kycStatus: nextVer ? "approved" : member.kycStatus || "none"
-    });
-    showToast(nextVer ? "تم منح الشارة الزرقاء للصحفي" : "تم سحب الشارة الزرقاء");
-    openStaffDossierModal(member.id);
-  });
-
-  document.getElementById("dossier-toggle-direct-btn")?.addEventListener("click", async () => {
-    const nextDirect = !Boolean(member.directPublish);
-    await updateDoc(doc(db, "staff", member.id), { directPublish: nextDirect });
-    showToast(
-      nextDirect
-        ? "تم منح الصحفي صلاحية النشر المباشر"
-        : "تم تحويل منشورات الصحفي إلى نظام المراجعة المسبقة"
-    );
-    openStaffDossierModal(member.id);
-  });
-
-  document.getElementById("dossier-approve-charter-btn")?.addEventListener("click", async () => {
-    await updateDoc(doc(db, "staff", member.id), {
-      signatureStatus: "approved",
-      everApprovedCharter: true
-    });
-    showToast("تم اعتماد توقيع ميثاق الشرف للصحفي");
-    openStaffDossierModal(member.id);
-  });
-
-  document.getElementById("dossier-reject-charter-btn")?.addEventListener("click", async () => {
-    await updateDoc(doc(db, "staff", member.id), { signatureStatus: "rejected" });
-    showToast("تم إرسال أمر إعادة التوقيع للصحفي");
-    openStaffDossierModal(member.id);
-  });
-
-  document.getElementById("dossier-delete-staff-btn")?.addEventListener("click", async () => {
-    if (!confirm(`هل أنت متأكد من حذف حساب الصحفي (${member.name}) نهائياً؟`)) return;
-    await deleteDoc(doc(db, "staff", member.id));
-    modal.classList.add("hidden");
-    showToast("تم حذف حساب الصحفي نهائياً");
-  });
-
-  // حفظ تعديلات بيانات الصحفي وكلمة مروره وأقسامه المسموحة
-  document.getElementById("cr-dossier-edit-form")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const name = (document.getElementById("dos-name")?.value || "").trim();
-    const jobTitle = (document.getElementById("dos-job")?.value || "").trim();
-    const role = document.getElementById("dos-role")?.value || "writer";
-    const username = (document.getElementById("dos-username")?.value || "").trim();
-    const password = (document.getElementById("dos-password")?.value || "").trim();
-    const pinCode = (document.getElementById("dos-pin")?.value || "").trim();
-    const whatsapp = (document.getElementById("dos-whatsapp")?.value || "").trim();
-    const contactEmail = (document.getElementById("dos-email")?.value || "").trim();
-
-    let allowedCategories = ["all"];
-    if (!allCatsChk?.checked) {
-      const checkedCats = Array.from(
-        specGrid.querySelectorAll(".specific-cat-chk:checked")
-      ).map((c) => c.value);
-      if (!checkedCats.length) {
-        showToast("يرجى اختيار قسم واحد على الأقل للصحفي أو تفعيل خيار (جميع الأقسام)");
-        return;
-      }
-      allowedCategories = checkedCats;
-    }
-
-    const updatePayload = {
-      name,
-      jobTitle,
-      role,
-      username,
-      password,
-      pinCode,
-      whatsapp,
-      contactEmail,
-      email: contactEmail,
-      avatar: state.dossierAvatarTempData || member.avatar || "",
-      allowedCategories,
-      directPublish:
-        role === "trusted_writer" || role === "admin" ? true : Boolean(member.directPublish),
-      updatedAt: Date.now()
-    };
-
-    try {
-      await updateDoc(doc(db, "staff", member.id), updatePayload);
-      showToast("تم حفظ كافة بيانات الصحفي وكلمة مروره وأقسامه المسموحة بنجاح");
-      openStaffDossierModal(member.id);
-    } catch (err) {
-      console.error(err);
-      showToast("تعذر حفظ تعديلات الحساب");
-    }
-  });
-
-  // تكبير الوثائق والتوقيعات عند النقر
-  content.querySelectorAll("[data-zoom-img]").forEach((img) => {
-    img.addEventListener("click", () => {
-      openImageInLightbox(img.getAttribute("data-zoom-img"));
-    });
-  });
-}
-
-// ==================== 9. إدارة الأقسام والتصنيفات الفرعية (View 4) ====================
-function renderCategoriesManagementView() {
-  const listEl = document.getElementById("admin-categories-list");
-  if (!listEl) return;
-
-  const sorted = [...state.compasses].sort((a, b) => (a.order || 99) - (b.order || 99));
-
-  listEl.innerHTML = sorted
-    .map((c) => {
-      const clean = cleanCategoryName(c.name);
-      const subs = Array.isArray(c.subcategories) ? c.subcategories : [];
-      return `
-        <div class="cr-row-card">
-          <div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <strong style="font-size:1rem;">${escapeHtml(clean)}</strong>
-              <span class="cr-status-badge ${c.visible !== false ? "st-published" : "st-draft"}">
-                ${c.visible !== false ? "ظاهر في الموقع" : "مخفي"}
-              </span>
-              <span style="font-size:0.75rem;color:var(--text-muted);">الترتيب: ${
-                c.order || 1
-              }</span>
-            </div>
-            <p style="font-size:0.8rem;color:var(--text-muted);margin-top:4px;">
-              الفرعيات: ${subs.length ? escapeHtml(subs.join(" ، ")) : "بدون فرعيات"}
-            </p>
-          </div>
-
-          <div style="display:flex;gap:6px;">
-            <button type="button" class="cr-btn cr-btn-secondary cr-btn-sm" data-edit-cat="${escapeHtml(
-              c.id
-            )}">تعديل</button>
-            <button type="button" class="cr-btn cr-btn-danger cr-btn-sm" data-del-cat="${escapeHtml(
-              c.id
-            )}">حذف</button>
-          </div>
-        </div>
-      `;
-    })
-    .join("");
-
-  listEl.querySelectorAll("[data-edit-cat]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const cat = state.compasses.find((x) => x.id === btn.getAttribute("data-edit-cat"));
-      if (!cat) return;
-      document.getElementById("edit-cat-id").value = cat.id;
-      document.getElementById("cat-name-input").value = cleanCategoryName(cat.name);
-      document.getElementById("cat-slug-input").value = cat.id || "";
-      document.getElementById("cat-subs-input").value = (cat.subcategories || []).join("، ");
-      document.getElementById("cat-order-input").value = cat.order || 1;
-      document.getElementById("cat-visible-chk").checked = cat.visible !== false;
-      document.getElementById("cat-form-heading").textContent = `تعديل القسم: ${cleanCategoryName(
-        cat.name
-      )}`;
-    });
-  });
-
-  listEl.querySelectorAll("[data-del-cat]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const id = btn.getAttribute("data-del-cat");
-      if (!id || !confirm("هل أنت متأكد من حذف هذا القسم؟")) return;
-      try {
-        await deleteDoc(doc(db, "categories", id));
-        state.compasses = state.compasses.filter((x) => x.id !== id);
-        renderCategoriesManagementView();
-        showToast("تم حذف القسم بنجاح");
-      } catch (_) {
-        showToast("تعذر حذف القسم");
-      }
-    });
-  });
-}
-
-// ==================== 10. إدارة الإعلانات الممولة (View 5) ====================
-function renderAdsManagementView() {
-  const listEl = document.getElementById("admin-ads-list");
-  if (!listEl) return;
-
-  if (!state.ads.length) {
-    listEl.innerHTML = `<div class="cr-empty-box"><p>لا توجد حملات إعلانية مضافة حالياً.</p></div>`;
-    return;
-  }
-
-  listEl.innerHTML = state.ads
-    .map((ad) => {
-      const isActive = ad.active !== false && ad.status !== "paused";
-      return `
-        <div class="cr-row-card">
-          <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:220px;">
-            ${
-              ad.imageUrl
-                ? `<img src="${escapeHtml(
-                    ad.imageUrl
-                  )}" alt="" style="width:74px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--border-light);">`
-                : ""
-            }
-            <div>
-              <div style="display:flex;align-items:center;gap:6px;">
-                <strong>${escapeHtml(ad.title)}</strong>
-                <span class="cr-status-badge ${isActive ? "st-published" : "st-draft"}">
-                  ${isActive ? "نشط" : "متوقف"}
-                </span>
-              </div>
-              <p style="font-size:0.78rem;color:var(--text-muted);margin-top:3px;">
-                الراعي: ${escapeHtml(ad.sponsorName || "-")} • المشاهدات: <strong>${Number(
-        ad.views || 0
-      ).toLocaleString("en-US")}</strong> • النقرات: <strong>${Number(
-        ad.clicks || 0
-      ).toLocaleString("en-US")}</strong>
-              </p>
-            </div>
-          </div>
-
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button type="button" class="cr-btn cr-btn-secondary cr-btn-sm" data-toggle-ad="${escapeHtml(
-              ad.id
-            )}">
-              ${isActive ? "إيقاف مؤقت" : "تفعيل"}
-            </button>
-            <button type="button" class="cr-btn cr-btn-secondary cr-btn-sm" data-edit-ad="${escapeHtml(
-              ad.id
-            )}">تعديل</button>
-            <button type="button" class="cr-btn cr-btn-danger cr-btn-sm" data-del-ad="${escapeHtml(
-              ad.id
-            )}">حذف</button>
-          </div>
-        </div>
-      `;
-    })
-    .join("");
-
-  listEl.querySelectorAll("[data-toggle-ad]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const ad = state.ads.find((x) => x.id === btn.getAttribute("data-toggle-ad"));
-      if (!ad) return;
-      const nextActive = !(ad.active !== false && ad.status !== "paused");
-      await updateDoc(doc(db, "ads", ad.id), {
-        active: nextActive,
-        status: nextActive ? "active" : "paused"
-      });
-      showToast(nextActive ? "تم تفعيل الحملة الإعلانية" : "تم إيقاف الحملة الإعلانية مؤقتاً");
-    });
-  });
-
-  listEl.querySelectorAll("[data-edit-ad]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const ad = state.ads.find((x) => x.id === btn.getAttribute("data-edit-ad"));
-      if (!ad) return;
-      document.getElementById("edit-ad-id").value = ad.id;
-      document.getElementById("ad-title-input").value = ad.title || "";
-      document.getElementById("ad-sponsor-input").value = ad.sponsorName || "";
-      document.getElementById("ad-target-url").value = ad.targetUrl || "";
-      document.getElementById("ad-image-url").value =
-        ad.imageUrl && !ad.imageUrl.startsWith("data:") ? ad.imageUrl : "";
-      document.getElementById("ad-active-chk").checked = ad.active !== false;
-      state.adImageTempData = ad.imageUrl || "";
-      renderSmallImagePreview("ad-img-preview-box", state.adImageTempData);
-      document.getElementById("ad-form-heading").textContent = `تعديل الإعلان: ${ad.title}`;
-    });
-  });
-
-  listEl.querySelectorAll("[data-del-ad]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const id = btn.getAttribute("data-del-ad");
-      if (!id || !confirm("هل تريد حذف هذا الإعلان نهائياً؟")) return;
-      await deleteDoc(doc(db, "ads", id));
-      showToast("تم حذف الحملة الإعلانية");
-    });
-  });
-}
-
-// ==================== 11. إعدادات الهوية، الشعارات الثلاثة، اللون، والميثاق (View 6) ====================
-function renderSmallImagePreview(boxId, imgSrc) {
-  const box = document.getElementById(boxId);
-  if (!box) return;
-  if (!imgSrc) {
-    box.innerHTML = "";
-    box.classList.add("hidden");
-    return;
-  }
-  box.classList.remove("hidden");
-  box.innerHTML = `<img src="${escapeHtml(imgSrc)}" alt="معاينة"><span>جاهز للحفظ</span>`;
-}
-
-function populateMasterSettingsView() {
-  const s = state.settings;
-  const setVal = (id, val) => {
-    const el = document.getElementById(id);
-    if (el) el.value = val || "";
-  };
-
-  setVal("set-site-name", s.siteName || "حُجرية بريس");
-  const color = s.accentColor || DEFAULT_BRAND_COLOR;
-  setVal("set-accent-color-picker", color);
-  setVal("set-accent-color-hex", color);
-  setVal("set-site-desc", s.siteDescription || "");
-
-  const hideChk = document.getElementById("set-hide-site-name");
-  if (hideChk) hideChk.checked = Boolean(s.hideSiteName);
-
-  const mainLogo = s.headerLogoUrl || s.logoUrl || "";
-  const sideLogo = s.sidebarLogoUrl || s.authLogoUrl || s.logoUrl || "";
-  const footLogo = s.footerLogoUrl || s.logoUrl || "";
-  const defPostImg = s.defaultPostImageUrl || s.coverImageUrl || "";
-  const favImg = s.faviconUrl || s.appIconUrl || "";
-
-  setVal("set-logo-main", mainLogo.startsWith("data:") ? "" : mainLogo);
-  setVal("set-logo-sidebar", sideLogo.startsWith("data:") ? "" : sideLogo);
-  setVal("set-logo-footer", footLogo.startsWith("data:") ? "" : footLogo);
-  setVal("set-default-post-img", defPostImg.startsWith("data:") ? "" : defPostImg);
-  setVal("set-favicon-img", favImg.startsWith("data:") ? "" : favImg);
-
-  renderSmallImagePreview("preview-logo-main", mainLogo);
-  renderSmallImagePreview("preview-logo-sidebar", sideLogo);
-  renderSmallImagePreview("preview-logo-footer", footLogo);
-  renderSmallImagePreview("preview-default-post-img", defPostImg);
-  renderSmallImagePreview("preview-favicon-img", favImg);
-
-  const soc = s.socials || {};
-  setVal("soc-whatsapp", soc.whatsapp || "");
-  setVal("soc-telegram", soc.telegram || "");
-  setVal("soc-x", soc.x || "");
-  setVal("soc-facebook", soc.facebook || "");
-  setVal("soc-youtube", soc.youtube || "");
-  setVal("soc-tiktok", soc.tiktok || "");
-
-  const verBadge = document.getElementById("current-charter-version-badge");
-  if (verBadge) verBadge.textContent = String(s.charterVersion || 1);
-
-  setVal("set-charter-html", s.charterHtml || DEFAULT_CHARTER_HTML);
-  setVal("set-about-html", s.aboutHtml || "");
-  setVal("set-privacy-html", s.privacyHtml || "");
-
-  setVal("set-master-username", s.masterUsername || "admin");
-  setVal("set-master-password", s.masterPassword || "admin");
-  setVal("set-master-pin", s.masterPin || "0000");
-}
-
-// ==================== 12. إدارة التنقل وربط جميع الأحداث ====================
-function switchControlRoomView(viewId) {
-  state.activeView = viewId;
-
-  [
-    "view-reviews",
-    "view-posts",
-    "view-staff",
-    "view-categories",
-    "view-ads",
-    "view-settings"
-  ].forEach((id) => {
-    document.getElementById(id)?.classList.toggle("hidden", id !== viewId);
-  });
-
-  document.querySelectorAll("#cr-main-nav .cr-nav-item").forEach((btn) => {
-    btn.classList.toggle("active", btn.getAttribute("data-view") === viewId);
-  });
-
-  renderAllControlRoomViews();
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-function renderAllControlRoomViews() {
-  if (!state.currentAdmin) return;
-  renderTopPlatformStats();
-
-  if (state.activeView === "view-reviews") {
-    renderReviewsCenterView();
-  } else if (state.activeView === "view-posts") {
-    renderAllPostsManagementView();
-  } else if (state.activeView === "view-staff") {
-    renderStaffDirectoryView();
-  } else if (state.activeView === "view-categories") {
-    renderCategoriesManagementView();
-  } else if (state.activeView === "view-ads") {
-    renderAdsManagementView();
-  } else if (state.activeView === "view-settings") {
-    populateMasterSettingsView();
-  }
-}
-
-function bindAllControlRoomEvents() {
-  // 1. بوابة الدخول الإدارية
-  const tabCred = document.getElementById("auth-tab-credentials");
-  const tabPin = document.getElementById("auth-tab-pin");
-  const formCred = document.getElementById("cr-login-credentials-form");
-  const boxPin = document.getElementById("cr-login-pin-container");
-
-  tabCred?.addEventListener("click", () => {
-    tabCred.classList.add("active");
-    tabPin?.classList.remove("active");
-    formCred?.classList.remove("hidden");
-    boxPin?.classList.add("hidden");
-  });
-
-  tabPin?.addEventListener("click", () => {
-    tabPin.classList.add("active");
-    tabCred?.classList.remove("active");
-    boxPin?.classList.remove("hidden");
-    formCred?.classList.add("hidden");
-    refreshPinLoginUi();
-    document.getElementById("login-pin-code")?.focus();
-  });
-
-  document.getElementById("toggle-login-pass-btn")?.addEventListener("click", () => {
-    const inp = document.getElementById("login-password");
-    if (inp) inp.type = inp.type === "password" ? "text" : "password";
-  });
-
-  document.getElementById("unbind-device-btn")?.addEventListener("click", () => {
-    clearDeviceBoundAdmin();
-    tabCred?.click();
-    showToast("تم إلغاء ربط الجهاز بنجاح");
-  });
-
-  formCred?.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const idVal = document.getElementById("login-identifier")?.value || "";
-    const passVal = document.getElementById("login-password")?.value || "";
-    const admin = verifyAdminCredentials(idVal, passVal);
-    if (!admin) {
-      showToast("بيانات الدخول غير صحيحة أو الحساب لا يملك صلاحية الإدارة العليا");
-      return;
-    }
-    activateAdminSession(admin, true);
-    showToast(`مرحباً بك في غرفة التحكم العليا: ${admin.name}`);
-  });
-
-  document.getElementById("cr-login-pin-form")?.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const pinVal = document.getElementById("login-pin-code")?.value || "";
-    const res = verifyDeviceBoundAdminPin(pinVal);
-    if (res.error) {
-      showToast(res.error);
-      return;
-    }
-    activateAdminSession(res.user, false);
-    const pinInp = document.getElementById("login-pin-code");
-    if (pinInp) pinInp.value = "";
-    showToast(`مرحباً بعودتك: ${res.user.name}`);
-  });
-
-  // 2. التنقل الرئيسي والخروج
-  document.querySelectorAll("#cr-main-nav .cr-nav-item").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      switchControlRoomView(btn.getAttribute("data-view") || "view-reviews");
-    });
-  });
-
-  document.getElementById("header-logout-btn")?.addEventListener("click", handleAdminLogout);
-
-  // 3. التبويبات الأربعة داخل مركز المراجعات
-  document.querySelectorAll(".cr-subtab[data-rev-tab]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const targetPane = btn.getAttribute("data-rev-tab");
-      state.activeReviewSubtab = targetPane;
-      document
-        .querySelectorAll(".cr-subtab")
-        .forEach((b) => b.classList.toggle("active", b === btn));
-      document
-        .querySelectorAll(".cr-rev-pane")
-        .forEach((p) => p.classList.toggle("hidden", p.id !== targetPane));
-    });
-  });
-
-  // 4. فلاتر وبحث الأخبار + نافذة التعديل الشامل للخبر
-  document.querySelectorAll("#posts-filter-bar .cr-filter-pill").forEach((pill) => {
-    pill.addEventListener("click", () => {
-      state.postsFilterType = pill.getAttribute("data-post-filter") || "all";
-      document
-        .querySelectorAll("#posts-filter-bar .cr-filter-pill")
-        .forEach((p) => p.classList.toggle("active", p === pill));
-      renderAllPostsManagementView();
-    });
-  });
-
-  document.getElementById("all-posts-search-input")?.addEventListener("input", (e) => {
-    state.postsSearchQuery = (e.target.value || "").trim();
-    renderAllPostsManagementView();
-  });
-
-  document.getElementById("all-posts-category-filter")?.addEventListener("change", (e) => {
-    state.postsFilterCategory = e.target.value || "all";
-    renderAllPostsManagementView();
-  });
-
-  document.getElementById("close-edit-post-modal-btn")?.addEventListener("click", () => {
-    document.getElementById("edit-post-modal")?.classList.add("hidden");
-  });
-
-  document.getElementById("admin-post-image-file")?.addEventListener("change", async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const webp = await compressImageToWebp(file, 1150, 0.8);
-      state.editPostImageTempData = webp;
-      showToast("تم تجهيز الصورة الجديدة للخبر");
-    } catch (_) {}
-  });
-
-  document
-    .getElementById("cr-edit-post-form")
-    ?.addEventListener("submit", handleSaveMasterPostEdits);
-
-  document
-    .getElementById("admin-delete-post-permanently-btn")
-    ?.addEventListener("click", async () => {
-      const postId = document.getElementById("admin-edit-post-id")?.value;
-      if (!postId || !confirm("هل أنت متأكد من حذف هذا الخبر نهائياً من قاعدة البيانات؟")) {
-        return;
-      }
-      await deleteDoc(doc(db, "posts", postId));
-      document.getElementById("edit-post-modal")?.classList.add("hidden");
-      showToast("تم حذف الخبر نهائياً");
-    });
-
-  // 5. بحث الكادر وإضافة صحفي جديد وتحديد أقسامه المسموحة
-  document.getElementById("staff-smart-search")?.addEventListener("input", (e) => {
-    state.staffSearchQuery = (e.target.value || "").trim();
-    renderStaffDirectoryView();
-  });
-
-  document.getElementById("open-create-staff-modal-btn")?.addEventListener("click", () => {
-    renderAllowedCategoriesCheckboxes("new-staff-specific-cats-grid", ["all"]);
-    document.getElementById("new-staff-all-cats-chk").checked = true;
-    document.getElementById("new-staff-specific-cats-grid")?.classList.add("hidden");
-    document.getElementById("create-staff-modal")?.classList.remove("hidden");
-  });
-
-  document.getElementById("close-create-staff-modal-btn")?.addEventListener("click", () => {
-    document.getElementById("create-staff-modal")?.classList.add("hidden");
-  });
-
-  document.getElementById("new-staff-all-cats-chk")?.addEventListener("change", (e) => {
-    document
-      .getElementById("new-staff-specific-cats-grid")
-      ?.classList.toggle("hidden", e.target.checked);
-  });
-
-  document.getElementById("cr-create-staff-form")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const name = (document.getElementById("new-staff-name")?.value || "").trim();
-    const jobTitle = (document.getElementById("new-staff-job")?.value || "").trim() || "صحفي";
-    const username = (document.getElementById("new-staff-username")?.value || "").trim();
-    const password = (document.getElementById("new-staff-password")?.value || "").trim();
-    const pinCode = (document.getElementById("new-staff-pin")?.value || "").trim();
-    const whatsapp = (document.getElementById("new-staff-whatsapp")?.value || "").trim();
-    const role = document.getElementById("new-staff-role")?.value || "writer";
-    const verified = Boolean(document.getElementById("new-staff-verified-chk")?.checked);
-    const allCats = Boolean(document.getElementById("new-staff-all-cats-chk")?.checked);
-
-    let allowedCategories = ["all"];
-    if (!allCats) {
-      const checked = Array.from(
-        document.querySelectorAll("#new-staff-specific-cats-grid .specific-cat-chk:checked")
-      ).map((c) => c.value);
-      if (!checked.length) {
-        showToast("يرجى اختيار قسم واحد على الأقل للصحفي");
-        return;
-      }
-      allowedCategories = checked;
-    }
-
-    const newPressId = generateUniquePressId(state.staff);
-    const payload = {
-      pressId: newPressId,
-      name,
-      jobTitle,
-      username,
-      password,
-      pinCode,
-      whatsapp,
-      role,
-      verified,
-      directPublish: role === "trusted_writer" || role === "admin",
-      allowedCategories,
-      accountStatus: "active",
-      signatureStatus: "none",
-      signedCharterVersion: 0,
-      createdAt: Date.now()
-    };
-
-    try {
-      await addDoc(collection(db, "staff"), payload);
-      document.getElementById("cr-create-staff-form")?.reset();
-      document.getElementById("create-staff-modal")?.classList.add("hidden");
-      showToast(`تم إنشاء حساب الصحفي وتوليد الهوية الصحفية: ${newPressId}`);
-    } catch (_) {
-      showToast("تعذر إنشاء الحساب");
-    }
-  });
-
-  document.getElementById("close-dossier-modal-btn")?.addEventListener("click", () => {
-    document.getElementById("staff-dossier-modal")?.classList.add("hidden");
-  });
-
-  // 6. نموذج إدارة الأقسام
-  document.getElementById("reset-cat-form-btn")?.addEventListener("click", () => {
-    document.getElementById("edit-cat-id").value = "";
-    document.getElementById("cr-category-form")?.reset();
-    document.getElementById("cat-form-heading").textContent = "إضافة أو تعديل قسم إخباري";
-  });
-
-  document.getElementById("cr-category-form")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const editId = (document.getElementById("edit-cat-id")?.value || "").trim();
-    const name = cleanCategoryName(document.getElementById("cat-name-input")?.value || "");
-    const slug =
-      (document.getElementById("cat-slug-input")?.value || "").trim() ||
-      editId ||
-      `cat-${Date.now()}`;
-    const subsRaw = document.getElementById("cat-subs-input")?.value || "";
-    const order = Number(document.getElementById("cat-order-input")?.value || 1);
-    const visible = Boolean(document.getElementById("cat-visible-chk")?.checked);
-
-    const subcategories = subsRaw
-      .split(/[،,]+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    const catPayload = { name, subcategories, order, visible, updatedAt: Date.now() };
-
-    try {
-      await setDoc(doc(db, "categories", slug), catPayload, { merge: true });
-      document.getElementById("reset-cat-form-btn")?.click();
-      showToast("تم حفظ القسم وتحديث شريط الأقسام في المنصة");
-    } catch (_) {
-      showToast("تعذر حفظ القسم");
-    }
-  });
-
-  // 7. نموذج إدارة الإعلانات الممولة
-  document.getElementById("reset-ad-form-btn")?.addEventListener("click", () => {
-    document.getElementById("edit-ad-id").value = "";
-    state.adImageTempData = "";
-    document.getElementById("cr-ad-form")?.reset();
-    renderSmallImagePreview("ad-img-preview-box", "");
-    document.getElementById("ad-form-heading").textContent = "إضافة أو تعديل إعلان ممول";
-  });
-
-  document.getElementById("ad-image-file")?.addEventListener("change", async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const webp = await compressImageToWebp(file, 950, 0.8);
-      state.adImageTempData = webp;
-      renderSmallImagePreview("ad-img-preview-box", webp);
-    } catch (_) {}
-  });
-
-  document.getElementById("cr-ad-form")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const editId = (document.getElementById("edit-ad-id")?.value || "").trim();
-    const title = (document.getElementById("ad-title-input")?.value || "").trim();
-    const sponsorName = (document.getElementById("ad-sponsor-input")?.value || "").trim();
-    const targetUrl = (document.getElementById("ad-target-url")?.value || "").trim();
-    const urlInput = (document.getElementById("ad-image-url")?.value || "").trim();
-    const active = Boolean(document.getElementById("ad-active-chk")?.checked);
-
-    const payload = {
-      title,
-      sponsorName,
-      targetUrl,
-      imageUrl: urlInput || state.adImageTempData || "",
-      active,
-      status: active ? "active" : "paused",
-      updatedAt: Date.now()
-    };
-
-    try {
-      if (editId) {
-        await updateDoc(doc(db, "ads", editId), payload);
-      } else {
-        await addDoc(collection(db, "ads"), {
-          ...payload,
-          views: 0,
-          clicks: 0,
-          createdAt: Date.now()
-        });
-      }
-      document.getElementById("reset-ad-form-btn")?.click();
-      showToast("تم حفظ ونشر الحملة الإعلانية بنجاح");
-    } catch (_) {
-      showToast("تعذر حفظ الإعلان");
-    }
-  });
-
-  // 8. إعدادات الهوية، الألوان، الشعارات الثلاثة، والميثاق
-  const colorPicker = document.getElementById("set-accent-color-picker");
-  const colorHex = document.getElementById("set-accent-color-hex");
-
-  colorPicker?.addEventListener("input", (e) => {
-    if (colorHex) colorHex.value = e.target.value;
-    applyDynamicThemeAndBranding(e.target.value);
-  });
-
-  colorHex?.addEventListener("input", (e) => {
-    const val = e.target.value.trim();
-    if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
-      if (colorPicker) colorPicker.value = val;
-      applyDynamicThemeAndBranding(val);
-    }
-  });
-
-  document.querySelectorAll(".cr-color-preset").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const col = btn.getAttribute("data-color") || DEFAULT_BRAND_COLOR;
-      if (colorPicker) colorPicker.value = col;
-      if (colorHex) colorHex.value = col;
-      applyDynamicThemeAndBranding(col);
-    });
-  });
-
-  // رفع الشعارات الثلاثة والصور الافتراضية من الجهاز مباشرة
-  const bindSettingImageUpload = (fileInputId, settingKey, previewId, maxW = 700) => {
-    document.getElementById(fileInputId)?.addEventListener("change", async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      try {
-        const webp = await compressImageToWebp(file, maxW, 0.85);
-        state.settings[settingKey] = webp;
-        renderSmallImagePreview(previewId, webp);
-        showToast("تم تجهيز الصورة — اضغط حفظ الإعدادات بالأسفل لتعميمها");
-      } catch (_) {}
-    });
-  };
-
-  bindSettingImageUpload("file-logo-main", "headerLogoUrl", "preview-logo-main", 600);
-  bindSettingImageUpload("file-logo-sidebar", "sidebarLogoUrl", "preview-logo-sidebar", 600);
-  bindSettingImageUpload("file-logo-footer", "footerLogoUrl", "preview-logo-footer", 600);
-  bindSettingImageUpload(
-    "file-default-post-img",
-    "defaultPostImageUrl",
-    "preview-default-post-img",
-    1100
-  );
-  bindSettingImageUpload("file-favicon-img", "faviconUrl", "preview-favicon-img", 256);
-
-  document
-    .getElementById("cr-master-settings-form")
-    ?.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const siteName =
-        (document.getElementById("set-site-name")?.value || "").trim() || "حُجرية بريس";
-      const accentColor =
-        (document.getElementById("set-accent-color-hex")?.value || "").trim() ||
-        DEFAULT_BRAND_COLOR;
-      const siteDescription = (document.getElementById("set-site-desc")?.value || "").trim();
-      const hideSiteName = Boolean(document.getElementById("set-hide-site-name")?.checked);
-
-      const urlMainLogo = (document.getElementById("set-logo-main")?.value || "").trim();
-      const urlSideLogo = (document.getElementById("set-logo-sidebar")?.value || "").trim();
-      const urlFootLogo = (document.getElementById("set-logo-footer")?.value || "").trim();
-      const urlDefImg = (document.getElementById("set-default-post-img")?.value || "").trim();
-      const urlFavImg = (document.getElementById("set-favicon-img")?.value || "").trim();
-
-      const finalHeaderLogo =
-        urlMainLogo || state.settings.headerLogoUrl || state.settings.logoUrl || "";
-      const finalSidebarLogo =
-        urlSideLogo || state.settings.sidebarLogoUrl || finalHeaderLogo;
-      const finalFooterLogo =
-        urlFootLogo || state.settings.footerLogoUrl || finalHeaderLogo;
-      const finalDefImg = urlDefImg || state.settings.defaultPostImageUrl || "";
-      const finalFav = urlFavImg || state.settings.faviconUrl || "";
-
-      const socials = {
-        whatsapp: (document.getElementById("soc-whatsapp")?.value || "").trim(),
-        telegram: (document.getElementById("soc-telegram")?.value || "").trim(),
-        x: (document.getElementById("soc-x")?.value || "").trim(),
-        facebook: (document.getElementById("soc-facebook")?.value || "").trim(),
-        youtube: (document.getElementById("soc-youtube")?.value || "").trim(),
-        tiktok: (document.getElementById("soc-tiktok")?.value || "").trim()
-      };
-
-      const charterHtml =
-        (document.getElementById("set-charter-html")?.value || "").trim() ||
-        DEFAULT_CHARTER_HTML;
-      const bumpCharter = Boolean(
-        document.getElementById("set-bump-charter-version")?.checked
-      );
-      const nextCharterVersion = bumpCharter
-        ? Number(state.settings.charterVersion || 1) + 1
-        : Number(state.settings.charterVersion || 1);
-
-      const aboutHtml = (document.getElementById("set-about-html")?.value || "").trim();
-      const privacyHtml = (document.getElementById("set-privacy-html")?.value || "").trim();
-
-      const masterUsername =
-        (document.getElementById("set-master-username")?.value || "").trim() || "admin";
-      const masterPassword =
-        (document.getElementById("set-master-password")?.value || "").trim() || "admin";
-      const masterPin =
-        (document.getElementById("set-master-pin")?.value || "").trim() || "0000";
-
-      const settingsPayload = {
-        siteName,
-        accentColor,
-        siteDescription,
-        hideSiteName,
-        logoUrl: finalHeaderLogo,
-        headerLogoUrl: finalHeaderLogo,
-        sidebarLogoUrl: finalSidebarLogo,
-        authLogoUrl: finalSidebarLogo,
-        footerLogoUrl: finalFooterLogo,
-        defaultPostImageUrl: finalDefImg,
-        faviconUrl: finalFav,
-        appIconUrl: finalFav,
-        socials,
-        charterHtml,
-        charterVersion: nextCharterVersion,
-        aboutHtml,
-        privacyHtml,
-        masterUsername,
-        masterPassword,
-        masterPin,
-        updatedAt: Date.now()
-      };
-
-      try {
-        await setDoc(doc(db, "settings", "general"), settingsPayload, { merge: true });
-        state.settings = { ...state.settings, ...settingsPayload };
-        const bumpChk = document.getElementById("set-bump-charter-version");
-        if (bumpChk) bumpChk.checked = false;
-        applyDynamicThemeAndBranding();
-        populateMasterSettingsView();
-        showToast(
-          bumpCharter
-            ? `تم حفظ الإعدادات وترقية ميثاق الشرف إلى الإصدار (${nextCharterVersion}) وإشعار كافة الصحفيين`
-            : "تم حفظ وتعميم كافة إعدادات المنصة والشعارات واللون بنجاح"
-        );
-      } catch (err) {
-        console.error(err);
-        showToast("تعذر حفظ الإعدادات");
-      }
-    });
-
-  // 9. إغلاق عارض الصور المكبر (Lightbox)
-  document.getElementById("close-lightbox-btn")?.addEventListener("click", () => {
-    document.getElementById("cr-image-lightbox")?.classList.add("hidden");
-  });
-}
-
-// ==================== 13. استعادة الجلسة والمزامنة الحية مع Firestore ====================
-function tryRestoreAdminSession() {
-  try {
-    const raw = localStorage.getItem(CR_SESSION_KEY);
-    if (!raw) {
-      document.getElementById("cr-auth-gate")?.classList.remove("hidden");
-      return;
-    }
-    const saved = JSON.parse(raw);
-    if (saved?.id === "master-admin" || saved?.pressId === "HP10001") {
-      activateAdminSession({ ...MASTER_ADMIN_DEFAULT }, false);
-      return;
-    }
-    const found = state.staff.find(
-      (s) =>
-        (s.id === saved?.id || normalizePressId(s.pressId) === normalizePressId(saved?.pressId)) &&
-        (s.isMasterAdmin || s.role === "admin") &&
-        s.accountStatus !== "frozen"
-    );
-    if (found) {
-      activateAdminSession(found, false);
-    } else if (state.staff.length > 0) {
-      document.getElementById("cr-auth-gate")?.classList.remove("hidden");
-    }
-  } catch (_) {
-    document.getElementById("cr-auth-gate")?.classList.remove("hidden");
-  }
-}
-
-function startControlRoomFirestoreSync() {
-  onSnapshot(doc(db, "settings", "general"), (snap) => {
-    if (snap.exists()) {
-      state.settings = { ...state.settings, ...snap.data() };
-      applyDynamicThemeAndBranding();
-      saveFastCache();
-      if (state.activeView === "view-settings") {
-        populateMasterSettingsView();
-      }
-    }
-  });
-
-  onSnapshot(collection(db, "categories"), (snap) => {
-    if (!snap.empty) {
-      const dbCats = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      const merged = [...DEFAULT_COMPASSES];
-      dbCats.forEach((cat) => {
-        const idx = merged.findIndex(
-          (m) =>
-            m.id === cat.id ||
-            cleanCategoryName(m.name) === cleanCategoryName(cat.name)
-        );
-        if (idx >= 0) merged[idx] = { ...merged[idx], ...cat };
-        else merged.push(cat);
-      });
-      state.compasses = merged;
-      saveFastCache();
-      renderAllControlRoomViews();
-    }
-  });
-
-  onSnapshot(collection(db, "staff"), (snap) => {
-    state.staff = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-
-    // ضمان امتلاك كل عضو هوية صحفية ثابتة (HP#####)
-    state.staff.forEach((member) => {
-      const pid = normalizePressId(member.pressId || "");
-      if (!pid.startsWith("HP") || pid.length < 6) {
-        const newPid = generateUniquePressId(state.staff);
-        member.pressId = newPid;
-        updateDoc(doc(db, "staff", member.id), { pressId: newPid }).catch(() => {});
-      }
-    });
-
-    saveFastCache();
-    if (!state.currentAdmin) {
-      tryRestoreAdminSession();
-    } else {
-      renderAllControlRoomViews();
-    }
-  });
-
-  onSnapshot(collection(db, "posts"), (snap) => {
-    state.posts = snap.docs
-      .map((d) => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => getTimestampMs(b) - getTimestampMs(a));
-    saveFastCache();
-    renderAllControlRoomViews();
-  });
-
-  onSnapshot(collection(db, "ads"), (snap) => {
-    state.ads = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    saveFastCache();
-    if (state.activeView === "view-ads") {
-      renderAdsManagementView();
-    }
-  });
-}
-
-// ==================== 14. نقطة الانطلاق الفورية لغرفة التحكم ====================
-document.addEventListener("DOMContentLoaded", () => {
-  restoreFastCache();
-  applyDynamicThemeAndBranding();
-  refreshPinLoginUi();
-  bindAllControlRoomEvents();
-  tryRestoreAdminSession();
-  startControlRoomFirestoreSync();
-});
+/* === نهاية الجزء الأول من app.js لغرفة التحكم — يُلصق الجزء الثاني تحته مباشرة === */
