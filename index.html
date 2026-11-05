@@ -7,25 +7,28 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#b80d38" id="cr-theme-color">
 
-  <!-- أيقونة غرفة التحكم الديناميكية -->
-  <link rel="icon" id="cr-dynamic-favicon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2218%22 fill=%22%23b80d38%22/><text x=%2250%%22 y=%2258%%22 font-size=%2264%22 fill=%22%23ffffff%22 font-family=%22Almarai,sans-serif%22 font-weight=%22800%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22>ح</text></svg>">
+  <!-- الأيقونة الديناميكية لغرفة التحكم -->
+  <link rel="icon" id="cr-dynamic-favicon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23b80d38%22/><text x=%2250%%22 y=%2258%%22 font-size=%2264%22 fill=%22%23ffffff%22 font-family=%22Almarai,sans-serif%22 font-weight=%22800%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22>ح</text></svg>">
   <link rel="apple-touch-icon" id="cr-dynamic-apple-icon" href="">
 
-  <!-- الخطوط الرسمية وأيقونات Google Material Symbols -->
+  <!-- الخطوط الرسمية (Almarai & Alexandria) + أيقونات Google Material Symbols -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800;900&family=Almarai:wght@300;400;700;800&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@22,500,0,0" rel="stylesheet">
 
-  <!-- ملف المظهر -->
+  <!-- ملف المظهر الزجاجي والتحريري -->
   <link rel="stylesheet" href="./style.css">
 </head>
 <body class="cr-body">
 
   <!-- =====================================================================
-       1. بوابة الدخول المحكمة لغرفة التحكم العليا (Password + Device-Bound PIN)
+       1. بوابة الدخول الزجاجية المحكمة لغرفة التحكم (Password + Device-Bound PIN)
        ===================================================================== -->
   <div id="cr-auth-gate" class="cr-auth-gate">
+    <div class="cr-auth-orb cr-orb-1"></div>
+    <div class="cr-auth-orb cr-orb-2"></div>
+
     <div class="cr-auth-card">
       <div class="cr-auth-brand">
         <div id="auth-logo-capsule" class="cr-logo-capsule hidden">
@@ -40,27 +43,27 @@
         </div>
       </div>
 
-      <div class="cr-auth-tabs" role="tablist">
-        <button type="button" id="auth-tab-credentials" class="cr-auth-tab active" role="tab" aria-selected="true">
+      <div class="cr-segmented-tabs" role="tablist">
+        <button type="button" id="auth-tab-credentials" class="cr-seg-tab active" role="tab" aria-selected="true">
           <span class="material-symbols-rounded" translate="no">admin_panel_settings</span>
           <span>بيانات الإدارة</span>
         </button>
-        <button type="button" id="auth-tab-pin" class="cr-auth-tab" role="tab" aria-selected="false">
+        <button type="button" id="auth-tab-pin" class="cr-seg-tab" role="tab" aria-selected="false">
           <span class="material-symbols-rounded" translate="no">pin</span>
           <span>الرمز السريع للجهاز</span>
         </button>
       </div>
 
-      <!-- (أ) الدخول الرسمي بكلمة المرور -->
+      <!-- (أ) الدخول بمعرف المدير أو الهوية الصحفية HP + كلمة المرور -->
       <form id="cr-login-credentials-form" class="cr-auth-form">
         <div class="cr-field">
           <label for="login-identifier">معرف المدير أو الهوية الصحفية (HP)</label>
-          <div class="cr-input-icon-wrap">
-            <span class="material-symbols-rounded" translate="no">shield_person</span>
+          <div class="cr-input-wrap">
+            <span class="material-symbols-rounded cr-input-icon" translate="no">shield_person</span>
             <input
               type="text"
               id="login-identifier"
-              class="cr-input"
+              class="cr-input cr-input-with-icon"
               required
               autocomplete="username"
               placeholder="مثال: admin أو HP10001"
@@ -70,43 +73,43 @@
 
         <div class="cr-field">
           <label for="login-password">كلمة المرور الإدارية</label>
-          <div class="cr-input-icon-wrap">
-            <span class="material-symbols-rounded" translate="no">lock</span>
+          <div class="cr-input-wrap">
+            <span class="material-symbols-rounded cr-input-icon" translate="no">lock</span>
             <input
               type="password"
               id="login-password"
-              class="cr-input"
+              class="cr-input cr-input-with-icon"
               required
               autocomplete="current-password"
               placeholder="أدخل كلمة المرور"
             >
-            <button type="button" id="toggle-login-pass-btn" class="cr-icon-action" title="إظهار/إخفاء كلمة المرور">
+            <button type="button" id="toggle-login-pass-btn" class="cr-input-action" title="إظهار/إخفاء كلمة المرور">
               <span class="material-symbols-rounded" translate="no">visibility</span>
             </button>
           </div>
         </div>
 
-        <button type="submit" class="cr-btn cr-btn-primary cr-btn-full">
+        <button type="submit" id="login-submit-btn" class="cr-btn cr-btn-primary cr-btn-full cr-btn-lg">
           <span class="material-symbols-rounded" translate="no">login</span>
-          <span>دخول إلى غرفة التحكم</span>
+          <span class="cr-btn-label">دخول آمن إلى غرفة التحكم</span>
         </button>
       </form>
 
       <!-- (ب) الدخول السريع المرتبط حصرياً بهذا الجهاز -->
       <div id="cr-login-pin-container" class="cr-auth-form hidden">
-        <div id="pin-unbound-notice" class="cr-security-box hidden">
-          <span class="material-symbols-rounded" translate="no">security</span>
+        <div id="pin-unbound-notice" class="cr-security-notice hidden">
+          <span class="material-symbols-rounded" translate="no">verified_user</span>
           <div>
             <strong>هذا الجهاز غير موثق للدخول السريع بعد</strong>
-            <p>لمنع أي اختراق خارجي، يجب تسجيل الدخول أولاً بمعرف المدير وكلمة المرور على هذا المتصفح لتفعيل رمز الدخول السريع (PIN) عليه.</p>
+            <p>لمنع أي دخول غير مصرح به، يجب تسجيل الدخول أولاً بمعرف المدير وكلمة المرور على هذا المتصفح لتفعيل رمز الدخول السريع (PIN) عليه.</p>
           </div>
         </div>
 
         <form id="cr-login-pin-form" class="hidden">
-          <div class="cr-bound-banner">
-            <span class="material-symbols-rounded cr-brand-icon" translate="no">verified_user</span>
-            <div class="cr-bound-meta">
-              <strong id="pin-bound-name">المدير العام</strong>
+          <div class="cr-bound-account-chip">
+            <span class="material-symbols-rounded cr-brand-icon" style="font-size:28px;" translate="no">shield_person</span>
+            <div class="cr-bound-info">
+              <strong id="pin-bound-name">رئيس التحرير</strong>
               <span id="pin-bound-press-id" dir="ltr">HP10001</span>
             </div>
             <button type="button" id="unbind-device-btn" class="cr-link-btn">إلغاء ربط الجهاز</button>
@@ -117,7 +120,7 @@
             <input
               type="password"
               id="login-pin-code"
-              class="cr-input cr-pin-input"
+              class="cr-input cr-pin-field"
               inputmode="numeric"
               maxlength="8"
               dir="ltr"
@@ -125,9 +128,9 @@
             >
           </div>
 
-          <button type="submit" class="cr-btn cr-btn-primary cr-btn-full">
+          <button type="submit" class="cr-btn cr-btn-primary cr-btn-full cr-btn-lg">
             <span class="material-symbols-rounded" translate="no">bolt</span>
-            <span>فتح غرفة التحكم فوراً</span>
+            <span class="cr-btn-label">فتح غرفة التحكم فوراً</span>
           </button>
         </form>
       </div>
@@ -135,63 +138,59 @@
   </div>
 
   <!-- =====================================================================
-       2. الهيدر الرسمي وشريط التنقل لغرفة التحكم العليا
+       2. الهيدر الزجاجي العلوي لغرفة التحكم العليا
        ===================================================================== -->
   <header class="cr-header">
+    <div class="cr-header-glass-bg"></div>
     <div class="cr-container cr-header-inner">
       <div class="cr-header-brand">
         <span id="header-logo-capsule" class="cr-logo-capsule hidden">
           <img id="header-logo-img" src="" alt="حُجرية بريس" class="cr-logo-img">
         </span>
-        <div class="cr-brand-text-wrap">
+        <div class="cr-brand-titles">
           <div class="cr-title-row">
             <span class="aj-pillar"></span>
-            <strong class="cr-brand-title">غرفة التحكم</strong>
+            <strong class="cr-brand-main">غرفة التحكم</strong>
           </div>
-          <span id="header-platform-subtitle" class="cr-brand-subtitle">حُجرية بريس</span>
+          <span id="header-platform-subtitle" class="cr-brand-sub">حُجرية بريس</span>
         </div>
       </div>
 
-      <!-- منافذ القيادة الستة -->
-      <nav class="cr-main-nav" id="cr-main-nav" aria-label="أقسام غرفة التحكم">
-        <button type="button" class="cr-nav-item active" data-view="view-reviews">
+      <!-- شريط تنقل سطح المكتب (5 منافذ قيادية مدمجة) -->
+      <nav class="cr-desktop-nav" aria-label="أقسام غرفة التحكم">
+        <button type="button" class="cr-nav-btn active" data-view="view-reviews">
           <span class="material-symbols-rounded" translate="no">fact_check</span>
-          <span class="cr-nav-text">المراجعات</span>
-          <span id="nav-reviews-badge" class="cr-mini-counter hidden">0</span>
+          <span>المراجعات</span>
+          <span id="desktop-reviews-badge" class="cr-badge-pill hidden">0</span>
         </button>
 
-        <button type="button" class="cr-nav-item" data-view="view-posts">
+        <button type="button" class="cr-nav-btn" data-view="view-posts">
           <span class="material-symbols-rounded" translate="no">newspaper</span>
-          <span class="cr-nav-text">الأخبار والأولويات</span>
+          <span>الأخبار والأولويات</span>
         </button>
 
-        <button type="button" class="cr-nav-item" data-view="view-staff">
+        <button type="button" class="cr-nav-btn" data-view="view-staff">
           <span class="material-symbols-rounded" translate="no">groups</span>
-          <span class="cr-nav-text">الكادر والصلاحيات</span>
+          <span>الكادر والصلاحيات</span>
         </button>
 
-        <button type="button" class="cr-nav-item" data-view="view-categories">
+        <button type="button" class="cr-nav-btn" data-view="view-structure">
           <span class="material-symbols-rounded" translate="no">category</span>
-          <span class="cr-nav-text">الأقسام</span>
+          <span>الأقسام والإعلانات</span>
         </button>
 
-        <button type="button" class="cr-nav-item" data-view="view-ads">
-          <span class="material-symbols-rounded" translate="no">ads_click</span>
-          <span class="cr-nav-text">الإعلانات</span>
-        </button>
-
-        <button type="button" class="cr-nav-item" data-view="view-settings">
+        <button type="button" class="cr-nav-btn" data-view="view-settings">
           <span class="material-symbols-rounded" translate="no">tune</span>
-          <span class="cr-nav-text">الهوية والميثاق</span>
+          <span>الهوية والميثاق</span>
         </button>
       </nav>
 
       <div class="cr-header-actions">
-        <div class="cr-admin-pill">
+        <div class="cr-admin-chip" title="حساب القيادة النشط">
           <span class="material-symbols-rounded cr-brand-icon" translate="no">shield_person</span>
           <span id="header-admin-name" class="cr-admin-name">رئيس التحرير</span>
         </div>
-        <button type="button" id="header-logout-btn" class="cr-icon-btn" title="تسجيل الخروج">
+        <button type="button" id="header-logout-btn" class="cr-icon-btn" title="تسجيل الخروج الآمن">
           <span class="material-symbols-rounded" translate="no">logout</span>
         </button>
       </div>
@@ -199,18 +198,49 @@
   </header>
 
   <!-- =====================================================================
-       3. مساحة العمل القيادية لغرفة التحكم
+       3. شريط التنقل السفلي الزجاجي للجوال (5 منافذ واضحة بدون تداخل نصوص)
+       ===================================================================== -->
+  <nav class="cr-mobile-bottom-nav" id="cr-mobile-nav" aria-label="تنقل الجوال">
+    <button type="button" class="cr-mob-nav-item active" data-view="view-reviews">
+      <span class="material-symbols-rounded" translate="no">fact_check</span>
+      <span class="cr-mob-nav-label">المراجعات</span>
+      <span id="mobile-reviews-badge" class="cr-mob-badge hidden">0</span>
+    </button>
+
+    <button type="button" class="cr-mob-nav-item" data-view="view-posts">
+      <span class="material-symbols-rounded" translate="no">newspaper</span>
+      <span class="cr-mob-nav-label">الأخبار</span>
+    </button>
+
+    <button type="button" class="cr-mob-nav-item" data-view="view-staff">
+      <span class="material-symbols-rounded" translate="no">groups</span>
+      <span class="cr-mob-nav-label">الكادر</span>
+    </button>
+
+    <button type="button" class="cr-mob-nav-item" data-view="view-structure">
+      <span class="material-symbols-rounded" translate="no">category</span>
+      <span class="cr-mob-nav-label">أقسام وإعلانات</span>
+    </button>
+
+    <button type="button" class="cr-mob-nav-item" data-view="view-settings">
+      <span class="material-symbols-rounded" translate="no">tune</span>
+      <span class="cr-mob-nav-label">الهوية والميثاق</span>
+    </button>
+  </nav>
+
+  <!-- =====================================================================
+       4. مساحة العمل القيادية لغرفة التحكم
        ===================================================================== -->
   <main class="cr-container cr-workspace">
 
-    <!-- شريط الإحصائيات العليا للنبض العام في المنصة -->
-    <section class="cr-stats-grid" aria-label="إحصائيات المنصة الحية">
+    <!-- شبكة الإحصائيات المدمجة (2x2 Bento Grid على الجوال و4 أعمدة على سطح المكتب) -->
+    <section class="cr-stats-bento" aria-label="إحصائيات المنصة الحية">
       <div class="cr-stat-card">
         <div class="cr-stat-icon cr-icon-amber">
           <span class="material-symbols-rounded" translate="no">pending_actions</span>
         </div>
-        <div class="cr-stat-data">
-          <span>بانتظار المراجعة والاعتماد</span>
+        <div class="cr-stat-info">
+          <span>بانتظار الاعتماد</span>
           <strong id="stat-total-pending">0</strong>
         </div>
       </div>
@@ -219,8 +249,8 @@
         <div class="cr-stat-icon">
           <span class="material-symbols-rounded" translate="no">public</span>
         </div>
-        <div class="cr-stat-data">
-          <span>إجمالي الأخبار المنشورة</span>
+        <div class="cr-stat-info">
+          <span>الأخبار المنشورة</span>
           <strong id="stat-total-published">0</strong>
         </div>
       </div>
@@ -229,8 +259,8 @@
         <div class="cr-stat-icon cr-icon-slate">
           <span class="material-symbols-rounded" translate="no">badge</span>
         </div>
-        <div class="cr-stat-data">
-          <span>أعضاء الكادر الصحفي</span>
+        <div class="cr-stat-info">
+          <span>الكادر الصحفي</span>
           <strong id="stat-total-staff">0</strong>
         </div>
       </div>
@@ -239,53 +269,52 @@
         <div class="cr-stat-icon cr-icon-blue">
           <span class="material-symbols-rounded" translate="no">monitoring</span>
         </div>
-        <div class="cr-stat-data">
-          <span>إجمالي قراءات المنصة</span>
+        <div class="cr-stat-info">
+          <span>إجمالي القراءات</span>
           <strong id="stat-total-views">0</strong>
         </div>
       </div>
     </section>
 
     <!-- =================================================================
-         الواجهة 1: مركز المراجعات والاعتماد الشامل (4 تبويبات متخصصة)
+         الواجهة 1: مركز المراجعات والاعتماد الفوري (4 كبسولات انسيابية)
          ================================================================= -->
     <section id="view-reviews" class="cr-view">
-      <div class="cr-panel-card">
-        <div class="cr-panel-header">
+      <div class="cr-surface-card">
+        <div class="cr-card-header">
           <div class="cr-title-row">
             <span class="aj-pillar"></span>
             <h2>مركز المراجعات والاعتماد الفوري</h2>
           </div>
         </div>
 
-        <!-- التبويبات الأربعة للمراجعات -->
-        <div class="cr-subtabs" role="tablist">
-          <button type="button" class="cr-subtab active" data-rev-tab="rev-pane-posts">
+        <!-- التبويبات الأربعة الانسيابية -->
+        <div class="cr-subtabs-scroll" role="tablist">
+          <button type="button" class="cr-subtab-pill active" data-rev-tab="rev-pane-posts">
             <span class="material-symbols-rounded" translate="no">article</span>
             <span>مراجعة المنشورات</span>
             <span id="badge-rev-posts" class="cr-subtab-count">0</span>
           </button>
 
-          <button type="button" class="cr-subtab" data-rev-tab="rev-pane-sigs">
+          <button type="button" class="cr-subtab-pill" data-rev-tab="rev-pane-sigs">
             <span class="material-symbols-rounded" translate="no">draw</span>
-            <span>مراجعة التوقيعات والميثاق</span>
+            <span>التوقيعات والميثاق</span>
             <span id="badge-rev-sigs" class="cr-subtab-count">0</span>
           </button>
 
-          <button type="button" class="cr-subtab" data-rev-tab="rev-pane-kyc">
+          <button type="button" class="cr-subtab-pill" data-rev-tab="rev-pane-kyc">
             <span class="material-symbols-rounded" translate="no">verified_user</span>
-            <span>مراجعة التوثيقات (KYC)</span>
+            <span>توثيق الهويات (KYC)</span>
             <span id="badge-rev-kyc" class="cr-subtab-count">0</span>
           </button>
 
-          <button type="button" class="cr-subtab" data-rev-tab="rev-pane-deletes">
+          <button type="button" class="cr-subtab-pill" data-rev-tab="rev-pane-deletes">
             <span class="material-symbols-rounded" translate="no">auto_delete</span>
             <span>طلبات الحذف</span>
             <span id="badge-rev-deletes" class="cr-subtab-count">0</span>
           </button>
         </div>
 
-        <!-- محتوى التبويبات الأربعة -->
         <div id="rev-pane-posts" class="cr-rev-pane"></div>
         <div id="rev-pane-sigs" class="cr-rev-pane hidden"></div>
         <div id="rev-pane-kyc" class="cr-rev-pane hidden"></div>
@@ -294,30 +323,35 @@
     </section>
 
     <!-- =================================================================
-         الواجهة 2: إدارة كافة الأخبار والتحكم الفوري بأولويات الظهور (العاجل/الرئيسية/النبض)
+         الواجهة 2: إدارة كافة الأخبار، الأولويات الفورية، البحث الذكي، والترقيم
          ================================================================= -->
     <section id="view-posts" class="cr-view hidden">
-      <div class="cr-panel-card">
-        <div class="cr-panel-header">
+      <div class="cr-surface-card">
+        <div class="cr-card-header">
           <div class="cr-title-row">
             <span class="aj-pillar"></span>
-            <h2>إدارة كافة الأخبار والتحكم بأولويات الظهور</h2>
+            <h2>إدارة كافة الأخبار والتحكم الفوري بأولويات الظهور</h2>
           </div>
 
-          <div class="cr-filter-pills" id="posts-filter-bar">
-            <button type="button" class="cr-filter-pill active" data-post-filter="all">الكل</button>
-            <button type="button" class="cr-filter-pill" data-post-filter="published">المنشورة</button>
-            <button type="button" class="cr-filter-pill" data-post-filter="breaking">في شريط العاجل</button>
-            <button type="button" class="cr-filter-pill" data-post-filter="featured">في الواجهة الكبرى</button>
-            <button type="button" class="cr-filter-pill" data-post-filter="quick">في موجز النبض</button>
-            <button type="button" class="cr-filter-pill" data-post-filter="draft">المسودات والمعلقة</button>
+          <div class="cr-filter-scroll" id="posts-filter-bar">
+            <button type="button" class="cr-filter-chip active" data-post-filter="all">الكل</button>
+            <button type="button" class="cr-filter-chip" data-post-filter="published">المنشورة</button>
+            <button type="button" class="cr-filter-chip" data-post-filter="breaking">شريط العاجل</button>
+            <button type="button" class="cr-filter-chip" data-post-filter="featured">الواجهة الكبرى</button>
+            <button type="button" class="cr-filter-chip" data-post-filter="quick">موجز النبض</button>
+            <button type="button" class="cr-filter-chip" data-post-filter="draft">المسودات والمعلقة</button>
           </div>
         </div>
 
         <div class="cr-grid-2" style="margin-bottom: 14px;">
-          <div class="cr-search-bar" style="margin-bottom: 0;">
-            <span class="material-symbols-rounded" translate="no">search</span>
-            <input type="search" id="all-posts-search-input" class="cr-input" placeholder="ابحث بعنوان الخبر، اسم الكاتب، أو الهوية الصحفية (HP)...">
+          <div class="cr-smart-search" style="margin-bottom: 0;">
+            <span class="material-symbols-rounded cr-search-icon" translate="no">manage_search</span>
+            <input
+              type="search"
+              id="all-posts-search-input"
+              class="cr-input cr-search-input"
+              placeholder="البحث الذكي الفوري بعنوان الخبر، اسم الكاتب، أو الهوية الصحفية (HP)..."
+            >
           </div>
 
           <div>
@@ -328,15 +362,28 @@
         </div>
 
         <div id="admin-all-posts-list" class="cr-list-stack"></div>
+
+        <!-- شريط ترقيم الصفحات الذكي للأخبار -->
+        <div id="admin-posts-pagination" class="cr-pagination-bar hidden">
+          <button type="button" id="posts-page-prev-btn" class="cr-btn cr-btn-secondary nr-btn-sm">
+            <span class="material-symbols-rounded" translate="no">chevron_right</span>
+            <span>السابق</span>
+          </button>
+          <span id="posts-page-info-label" class="cr-page-indicator">صفحة 1 من 1</span>
+          <button type="button" id="posts-page-next-btn" class="cr-btn cr-btn-secondary nr-btn-sm">
+            <span>التالي</span>
+            <span class="material-symbols-rounded" translate="no">chevron_left</span>
+          </button>
+        </div>
       </div>
     </section>
 
     <!-- =================================================================
-         الواجهة 3: إدارة الكادر الصحفي، الهويات (HP)، الصلاحيات، والأقسام المسموحة
+         الواجهة 3: سجل الكادر الصحفي، الهويات (HP#####)، والتحكم الشامل (God Mode)
          ================================================================= -->
     <section id="view-staff" class="cr-view hidden">
-      <div class="cr-panel-card">
-        <div class="cr-panel-header">
+      <div class="cr-surface-card">
+        <div class="cr-card-header">
           <div class="cr-title-row">
             <span class="aj-pillar"></span>
             <h2>سجل الكادر الصحفي والتحكم الشامل بالحسابات</h2>
@@ -344,17 +391,17 @@
 
           <button type="button" id="open-create-staff-modal-btn" class="cr-btn cr-btn-primary">
             <span class="material-symbols-rounded" translate="no">person_add</span>
-            <span>إضافة صحفي جديد وتوليد هوية HP</span>
+            <span>إضافة صحفي وتوليد هوية HP</span>
           </button>
         </div>
 
-        <div class="cr-search-bar">
-          <span class="material-symbols-rounded" translate="no">manage_search</span>
+        <div class="cr-smart-search">
+          <span class="material-symbols-rounded cr-search-icon" translate="no">manage_search</span>
           <input
             type="search"
             id="staff-smart-search"
-            class="cr-input"
-            placeholder="ابحث فوراً برقم الهوية الصحفية (مثال: HP10042) أو الاسم أو اسم المستخدم أو رقم الواتساب..."
+            class="cr-input cr-search-input"
+            placeholder="البحث الذكي الفوري برقم الهوية الصحفية (مثال: HP10042) أو الاسم أو اسم المستخدم أو رقم الواتساب..."
           >
         </div>
 
@@ -363,366 +410,360 @@
     </section>
 
     <!-- =================================================================
-         الواجهة 4: إدارة الأقسام الرئيسية والتصنيفات الفرعية
+         الواجهة 4 (مدمجة للتبسيط): إدارة الأقسام والفرعيات + إدارة الإعلانات الممولة
          ================================================================= -->
-    <section id="view-categories" class="cr-view hidden">
-      <div class="cr-split-layout">
-
-        <!-- يمين: إضافة أو تعديل قسم -->
-        <div class="cr-panel-card">
-          <div class="cr-panel-header">
-            <div class="cr-title-row">
-              <span class="aj-pillar"></span>
-              <h2 id="cat-form-heading">إضافة أو تعديل قسم إخباري</h2>
-            </div>
-            <button type="button" id="reset-cat-form-btn" class="cr-link-btn">قسم جديد</button>
-          </div>
-
-          <form id="cr-category-form">
-            <input type="hidden" id="edit-cat-id" value="">
-
-            <div class="cr-field">
-              <label for="cat-name-input">اسم القسم الرئيسي</label>
-              <input type="text" id="cat-name-input" class="cr-input" required placeholder="مثال: السياسة اليمنية">
-            </div>
-
-            <div class="cr-field">
-              <label for="cat-slug-input">المعرف الرابطي (Slug بالإنجليزية — اختياري)</label>
-              <input type="text" id="cat-slug-input" class="cr-input" dir="ltr" placeholder="yemen-politics">
-            </div>
-
-            <div class="cr-field">
-              <label for="cat-subs-input">التصنيفات الفرعية (افصل بين كل تصنيف بفاصلة ،)</label>
-              <textarea id="cat-subs-input" class="cr-textarea" rows="3" placeholder="الشرعية ومؤسسات الدولة، التحليلات الاستراتيجية، الشأن المحلي"></textarea>
-            </div>
-
-            <div class="cr-grid-2">
-              <div class="cr-field">
-                <label for="cat-order-input">ترتيب الظهور</label>
-                <input type="number" id="cat-order-input" class="cr-input" value="1" min="1">
-              </div>
-
-              <div class="cr-field" style="display:flex;align-items:center;padding-top:22px;">
-                <label class="cr-chip-checkbox" style="width:100%;">
-                  <input type="checkbox" id="cat-visible-chk" checked>
-                  <span>ظاهر في شريط أقسام الموقع العام</span>
-                </label>
-              </div>
-            </div>
-
-            <button type="submit" class="cr-btn cr-btn-primary cr-btn-full">
-              <span class="material-symbols-rounded" translate="no">save</span>
-              <span>حفظ القسم وتحديث المنصة</span>
-            </button>
-          </form>
+    <section id="view-structure" class="cr-view hidden">
+      <div class="cr-surface-card">
+        <div class="cr-segmented-tabs" style="margin-bottom: 20px;" role="tablist">
+          <button type="button" class="cr-seg-tab active" data-struct-tab="struct-pane-categories">
+            <span class="material-symbols-rounded" translate="no">category</span>
+            <span>إدارة الأقسام والتصنيفات الفرعية</span>
+          </button>
+          <button type="button" class="cr-seg-tab" data-struct-tab="struct-pane-ads">
+            <span class="material-symbols-rounded" translate="no">ads_click</span>
+            <span>إدارة الحملات الإعلانية والنقرات</span>
+          </button>
         </div>
 
-        <!-- يسار: قائمة الأقسام الحالية -->
-        <div class="cr-panel-card">
-          <div class="cr-panel-header">
-            <div class="cr-title-row">
-              <span class="material-symbols-rounded cr-brand-icon" translate="no">category</span>
-              <h2>الأقسام المعتمدة في المنصة</h2>
+        <!-- التبويب (أ): إدارة الأقسام الرئيسية والتصنيفات الفرعية -->
+        <div id="struct-pane-categories" class="cr-struct-pane">
+          <div class="cr-split-layout">
+            <div class="cr-sub-panel">
+              <div class="cr-card-header">
+                <div class="cr-title-row">
+                  <span class="aj-pillar"></span>
+                  <h3 id="cat-form-heading">إضافة أو تعديل قسم إخباري</h3>
+                </div>
+                <button type="button" id="reset-cat-form-btn" class="cr-link-btn">قسم جديد</button>
+              </div>
+
+              <form id="cr-category-form">
+                <input type="hidden" id="edit-cat-id" value="">
+
+                <div class="cr-field">
+                  <label for="cat-name-input">اسم القسم الرئيسي</label>
+                  <input type="text" id="cat-name-input" class="cr-input" required placeholder="مثال: السياسة اليمنية">
+                </div>
+
+                <div class="cr-field">
+                  <label for="cat-slug-input">المعرف الرابطي (Slug بالإنجليزية — اختياري)</label>
+                  <input type="text" id="cat-slug-input" class="cr-input" dir="ltr" placeholder="yemen-politics">
+                </div>
+
+                <div class="cr-field">
+                  <label for="cat-subs-input">التصنيفات الفرعية (افصل بين كل تصنيف بفاصلة ،)</label>
+                  <textarea id="cat-subs-input" class="cr-textarea" rows="3" placeholder="الشرعية ومؤسسات الدولة، التحليلات الاستراتيجية، الشأن المحلي"></textarea>
+                </div>
+
+                <div class="cr-grid-2">
+                  <div class="cr-field">
+                    <label for="cat-order-input">ترتيب الظهور</label>
+                    <input type="number" id="cat-order-input" class="cr-input" value="1" min="1">
+                  </div>
+
+                  <div class="cr-field" style="display:flex;align-items:center;padding-top:22px;">
+                    <label class="cr-chip-checkbox" style="width:100%;">
+                      <input type="checkbox" id="cat-visible-chk" checked>
+                      <span>ظاهر في الموقع العام</span>
+                    </label>
+                  </div>
+                </div>
+
+                <button type="submit" id="save-cat-btn" class="cr-btn cr-btn-primary cr-btn-full">
+                  <span class="material-symbols-rounded" translate="no">save</span>
+                  <span class="cr-btn-label">حفظ القسم وتحديث المنصة</span>
+                </button>
+              </form>
+            </div>
+
+            <div class="cr-sub-panel">
+              <div class="cr-card-header">
+                <div class="cr-title-row">
+                  <span class="material-symbols-rounded cr-brand-icon" translate="no">View_list</span>
+                  <h3>الأقسام المعتمدة في المنصة</h3>
+                </div>
+              </div>
+              <div id="admin-categories-list" class="cr-list-stack"></div>
             </div>
           </div>
+        </div>
 
-          <div id="admin-categories-list" class="cr-list-stack"></div>
+        <!-- التبويب (ب): إدارة الإعلانات الممولة ومراقبة النقرات والمشاهدات -->
+        <div id="struct-pane-ads" class="cr-struct-pane hidden">
+          <div class="cr-split-layout">
+            <div class="cr-sub-panel">
+              <div class="cr-card-header">
+                <div class="cr-title-row">
+                  <span class="aj-pillar"></span>
+                  <h3 id="ad-form-heading">إضافة أو تعديل إعلان ممول</h3>
+                </div>
+                <button type="button" id="reset-ad-form-btn" class="cr-link-btn">إعلان جديد</button>
+              </div>
+
+              <form id="cr-ad-form">
+                <input type="hidden" id="edit-ad-id" value="">
+
+                <div class="cr-field">
+                  <label for="ad-title-input">عنوان الحملة أو النص الإعلاني</label>
+                  <input type="text" id="ad-title-input" class="cr-input" required placeholder="مثال: اشترك الآن في خدمات...">
+                </div>
+
+                <div class="cr-field">
+                  <label for="ad-sponsor-input">اسم الجهة المعلنة / الراعي</label>
+                  <input type="text" id="ad-sponsor-input" class="cr-input" placeholder="مثال: شركة ...">
+                </div>
+
+                <div class="cr-field">
+                  <label for="ad-target-url">رابط التوجيه عند النقر على الإعلان</label>
+                  <input type="url" id="ad-target-url" class="cr-input" dir="ltr" required placeholder="https://...">
+                </div>
+
+                <div class="cr-field">
+                  <label>صورة البنر الإعلاني (رفع سحابي عبر ImgBB أو رابط مباشر)</label>
+                  <input type="file" id="ad-image-file" accept="image/*" class="cr-input" style="margin-bottom:8px;">
+                  <input type="url" id="ad-image-url" class="cr-input" dir="ltr" placeholder="أو الصق رابط صورة البنر https://...">
+                  <div id="ad-img-preview-box" class="cr-img-preview-bar hidden"></div>
+                </div>
+
+                <div class="cr-field">
+                  <label class="cr-chip-checkbox">
+                    <input type="checkbox" id="ad-active-chk" checked>
+                    <span>الإعلان نشط ومفعل للظهور في الموقع العام</span>
+                  </label>
+                </div>
+
+                <button type="submit" id="save-ad-btn" class="cr-btn cr-btn-primary cr-btn-full">
+                  <span class="material-symbols-rounded" translate="no">campaign</span>
+                  <span class="cr-btn-label">حفظ ونشر الحملة الإعلانية</span>
+                </button>
+              </form>
+            </div>
+
+            <div class="cr-sub-panel">
+              <div class="cr-card-header">
+                <div class="cr-title-row">
+                  <span class="material-symbols-rounded cr-brand-icon" translate="no">ads_click</span>
+                  <h3>الحملات الإعلانية النشطة وإحصائيات النقرات</h3>
+                </div>
+              </div>
+              <div id="admin-ads-list" class="cr-list-stack"></div>
+            </div>
+          </div>
         </div>
 
       </div>
     </section>
 
     <!-- =================================================================
-         الواجهة 5: إدارة الإعلانات الممولة ومراقبة النقرات والمشاهدات
+         الواجهة 5 (مدمجة في 3 تبويبات أنيقة): الهوية، الشعارات الثلاثة، الميثاق، والأمان
          ================================================================= -->
-    <section id="view-ads" class="cr-view hidden">
-      <div class="cr-split-layout">
-
-        <!-- يمين: نموذج إضافة أو تعديل إعلان -->
-        <div class="cr-panel-card">
-          <div class="cr-panel-header">
-            <div class="cr-title-row">
-              <span class="aj-pillar"></span>
-              <h2 id="ad-form-heading">إضافة أو تعديل إعلان ممول</h2>
-            </div>
-            <button type="button" id="reset-ad-form-btn" class="cr-link-btn">إعلان جديد</button>
+    <section id="view-settings" class="cr-view hidden">
+      <div class="cr-surface-card">
+        <div class="cr-card-header">
+          <div class="cr-title-row">
+            <span class="aj-pillar"></span>
+            <h2>إعدادات المنصة، الهوية اللونية، الشعارات، وميثاق الشرف</h2>
           </div>
+          <span class="cr-counter-pill">إصدار الميثاق الحالي: <strong id="current-charter-version-badge">1</strong></span>
+        </div>
 
-          <form id="cr-ad-form">
-            <input type="hidden" id="edit-ad-id" value="">
+        <!-- التبويبات الثلاثة المدمجة للإعدادات (تمنع طول الصفحة وتجمع كل فئة بوضوح) -->
+        <div class="cr-segmented-tabs cr-seg-3" style="margin-bottom: 22px;" role="tablist">
+          <button type="button" class="cr-seg-tab active" data-set-tab="set-pane-branding">
+            <span class="material-symbols-rounded" translate="no">palette</span>
+            <span>1. الهوية، اللون، والشعارات الثلاثة</span>
+          </button>
+          <button type="button" class="cr-seg-tab" data-set-tab="set-pane-charter">
+            <span class="material-symbols-rounded" translate="no">gavel</span>
+            <span>2. ميثاق الشرف والصفحات المؤسسية</span>
+          </button>
+          <button type="button" class="cr-seg-tab" data-set-tab="set-pane-security">
+            <span class="material-symbols-rounded" translate="no">security</span>
+            <span>3. التواصل، الأمان، ومفتاح ImgBB</span>
+          </button>
+        </div>
 
-            <div class="cr-field">
-              <label for="ad-title-input">عنوان الحملة أو النص الإعلاني</label>
-              <input type="text" id="ad-title-input" class="cr-input" required placeholder="مثال: اشترك الآن في خدمات...">
+        <form id="cr-master-settings-form">
+
+          <!-- التبويب 1: الهوية واللون الديناميكي والشعارات الثلاثة -->
+          <div id="set-pane-branding" class="cr-settings-pane">
+            <div class="cr-grid-2">
+              <div class="cr-field">
+                <label for="set-site-name">الاسم الرسمي للمنصة</label>
+                <input type="text" id="set-site-name" class="cr-input" required placeholder="حُجرية بريس">
+              </div>
+
+              <div class="cr-field">
+                <label>اللون الرسمي لهوية المنصة (يتعمم حياً في المستودعات الثلاثة)</label>
+                <div class="cr-color-picker-row">
+                  <input type="color" id="set-accent-color-picker" value="#b80d38" class="cr-color-swatch">
+                  <input type="text" id="set-accent-color-hex" class="cr-input" dir="ltr" value="#b80d38" style="max-width:125px;">
+                  <div class="cr-preset-colors">
+                    <button type="button" class="cr-color-preset" data-color="#b80d38" style="background:#b80d38;" title="القرمزي الرسمي"></button>
+                    <button type="button" class="cr-color-preset" data-color="#0284c7" style="background:#0284c7;" title="الأزرق الإخباري"></button>
+                    <button type="button" class="cr-color-preset" data-color="#0f766e" style="background:#0f766e;" title="الزمردي"></button>
+                    <button type="button" class="cr-color-preset" data-color="#1e293b" style="background:#1e293b;" title="الكحلي الداكن"></button>
+                    <button type="button" class="cr-color-preset" data-color="#b45309" style="background:#b45309;" title="الذهبي الدافئ"></button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="cr-field">
-              <label for="ad-sponsor-input">اسم الجهة المعلنة / الراعي</label>
-              <input type="text" id="ad-sponsor-input" class="cr-input" placeholder="مثال: شركة ...">
-            </div>
-
-            <div class="cr-field">
-              <label for="ad-target-url">رابط التوجيه عند النقر على الإعلان</label>
-              <input type="url" id="ad-target-url" class="cr-input" dir="ltr" required placeholder="https://...">
-            </div>
-
-            <div class="cr-field">
-              <label>صورة البنر الإعلاني (رفع ملف أو رابط مباشر)</label>
-              <input type="file" id="ad-image-file" accept="image/*" class="cr-input" style="margin-bottom:8px;">
-              <input type="url" id="ad-image-url" class="cr-input" dir="ltr" placeholder="أو الصق رابط صورة البنر https://...">
-              <div id="ad-img-preview-box" class="cr-img-preview-bar hidden"></div>
+              <label for="set-site-desc">الوصف التعريفي للمنصة (SEO Description)</label>
+              <textarea id="set-site-desc" class="cr-textarea" rows="2"></textarea>
             </div>
 
             <div class="cr-field">
               <label class="cr-chip-checkbox">
-                <input type="checkbox" id="ad-active-chk" checked>
-                <span>الإعلان نشط ومفعل للظهور في الموقع العام</span>
+                <input type="checkbox" id="set-hide-site-name">
+                <span>إخفاء الاسم النصي بجانب الشعار في هيدر الموقع العام (الاكتفاء بصورة الشعار فقط)</span>
               </label>
             </div>
 
-            <button type="submit" class="cr-btn cr-btn-primary cr-btn-full">
-              <span class="material-symbols-rounded" translate="no">campaign</span>
-              <span>حفظ ونشر الحملة الإعلانية</span>
-            </button>
-          </form>
-        </div>
+            <div class="cr-logos-grid" style="margin-top: 16px;">
+              <!-- الشعار 1 -->
+              <div class="cr-logo-config-box">
+                <label>1. شعار الهيدر الرئيسي (PNG مفرغ)</label>
+                <input type="file" id="file-logo-main" accept="image/*" class="cr-input" style="margin-bottom:8px;">
+                <input type="url" id="set-logo-main" class="cr-input" dir="ltr" placeholder="https://...">
+                <div id="preview-logo-main" class="cr-img-preview-bar hidden"></div>
+              </div>
 
-        <!-- يسار: قائمة الإعلانات وإحصائيات المشاهدات والنقرات -->
-        <div class="cr-panel-card">
-          <div class="cr-panel-header">
-            <div class="cr-title-row">
-              <span class="material-symbols-rounded cr-brand-icon" translate="no">ads_click</span>
-              <h2>الحملات الإعلانية النشطة والأرشيف</h2>
-            </div>
-          </div>
+              <!-- الشعار 2 -->
+              <div class="cr-logo-config-box">
+                <label>2. شعار القائمة الجانبية وبوابة الدخول</label>
+                <input type="file" id="file-logo-sidebar" accept="image/*" class="cr-input" style="margin-bottom:8px;">
+                <input type="url" id="set-logo-sidebar" class="cr-input" dir="ltr" placeholder="https://...">
+                <div id="preview-logo-sidebar" class="cr-img-preview-bar hidden"></div>
+              </div>
 
-          <div id="admin-ads-list" class="cr-list-stack"></div>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- =================================================================
-         الواجهة 6: إعدادات الهوية، الألوان، الشعارات الثلاثة، الميثاق، والتواصل
-         ================================================================= -->
-    <section id="view-settings" class="cr-view hidden">
-      <form id="cr-master-settings-form" class="cr-settings-stack">
-
-        <!-- 1. الهوية الأساسية واللون الديناميكي للمنصة -->
-        <div class="cr-panel-card">
-          <div class="cr-panel-header">
-            <div class="cr-title-row">
-              <span class="aj-pillar"></span>
-              <h2>هوية المنصة واللون الديناميكي العام</h2>
-            </div>
-          </div>
-
-          <div class="cr-grid-2">
-            <div class="cr-field">
-              <label for="set-site-name">الاسم الرسمي للمنصة</label>
-              <input type="text" id="set-site-name" class="cr-input" required placeholder="حُجرية بريس">
+              <!-- الشعار 3 -->
+              <div class="cr-logo-config-box">
+                <label>3. شعار التذييل السفلي (Footer Logo)</label>
+                <input type="file" id="file-logo-footer" accept="image/*" class="cr-input" style="margin-bottom:8px;">
+                <input type="url" id="set-logo-footer" class="cr-input" dir="ltr" placeholder="https://...">
+                <div id="preview-logo-footer" class="cr-img-preview-bar hidden"></div>
+              </div>
             </div>
 
-            <div class="cr-field">
-              <label>اللون الرسمي لهوية المنصة (يتحدث فوراً في المستودعات الثلاثة)</label>
-              <div class="cr-color-picker-row">
-                <input type="color" id="set-accent-color-picker" value="#b80d38" class="cr-color-swatch">
-                <input type="text" id="set-accent-color-hex" class="cr-input" dir="ltr" value="#b80d38" style="max-width:130px;">
-                <div class="cr-preset-colors">
-                  <button type="button" class="cr-color-preset" data-color="#b80d38" style="background:#b80d38;" title="القرمزي الرسمي"></button>
-                  <button type="button" class="cr-color-preset" data-color="#0284c7" style="background:#0284c7;" title="الأزرق الإخباري"></button>
-                  <button type="button" class="cr-color-preset" data-color="#0f766e" style="background:#0f766e;" title="الزمردي"></button>
-                  <button type="button" class="cr-color-preset" data-color="#1e293b" style="background:#1e293b;" title="الكحلي الداكن"></button>
-                  <button type="button" class="cr-color-preset" data-color="#b45309" style="background:#b45309;" title="الذهبي الدافئ"></button>
-                </div>
+            <div class="cr-grid-2" style="margin-top: 14px;">
+              <div class="cr-logo-config-box">
+                <label>الصورة الافتراضية للأخبار (تظهر للأخبار بدون صورة)</label>
+                <input type="file" id="file-default-post-img" accept="image/*" class="cr-input" style="margin-bottom:8px;">
+                <input type="url" id="set-default-post-img" class="cr-input" dir="ltr" placeholder="https://...">
+                <div id="preview-default-post-img" class="cr-img-preview-bar hidden"></div>
+              </div>
+
+              <div class="cr-logo-config-box">
+                <label>أيقونة المتصفح والتطبيق (Favicon & App Icon)</label>
+                <input type="file" id="file-favicon-img" accept="image/*" class="cr-input" style="margin-bottom:8px;">
+                <input type="url" id="set-favicon-img" class="cr-input" dir="ltr" placeholder="https://...">
+                <div id="preview-favicon-img" class="cr-img-preview-bar hidden"></div>
               </div>
             </div>
           </div>
 
-          <div class="cr-field">
-            <label for="set-site-desc">الوصف التعريفي للمنصة (يظهر في محركات البحث SEO والتذييل)</label>
-            <textarea id="set-site-desc" class="cr-textarea" rows="2"></textarea>
-          </div>
-
-          <div class="cr-field">
-            <label class="cr-chip-checkbox">
-              <input type="checkbox" id="set-hide-site-name">
-              <span>إخفاء الاسم النصي بجانب الشعار في هيدر الموقع العام (الاكتفاء بصورة الشعار فقط)</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- 2. الشعارات الثلاثة للمنصة + الصورة الافتراضية للأخبار + الأيقونة -->
-        <div class="cr-panel-card">
-          <div class="cr-panel-header">
-            <div class="cr-title-row">
-              <span class="aj-pillar"></span>
-              <h2>الشعارات الثلاثة والوسائط الافتراضية للمنصة</h2>
-            </div>
-          </div>
-
-          <p class="cr-helper-text">يمكنك رفع أي شعار مباشرة من جهازك أو لصق رابطه المباشر، وسيتم تعميمه فوراً على الموقع العام وغرفة الأخبار.</p>
-
-          <div class="cr-logos-grid">
-            <!-- الشعار الأول: شعار الهيدر الرئيسي -->
-            <div class="cr-logo-config-box">
-              <label>1. شعار الهيدر الرئيسي (PNG مفرغ)</label>
-              <input type="file" id="file-logo-main" accept="image/*" class="cr-input" style="margin-bottom:8px;">
-              <input type="url" id="set-logo-main" class="cr-input" dir="ltr" placeholder="https://...">
-              <div id="preview-logo-main" class="cr-img-preview-bar hidden"></div>
-            </div>
-
-            <!-- الشعار الثاني: شعار القائمة الجانبية وبوابة الدخول -->
-            <div class="cr-logo-config-box">
-              <label>2. شعار القائمة الجانبية وبوابة الدخول</label>
-              <input type="file" id="file-logo-sidebar" accept="image/*" class="cr-input" style="margin-bottom:8px;">
-              <input type="url" id="set-logo-sidebar" class="cr-input" dir="ltr" placeholder="https://...">
-              <div id="preview-logo-sidebar" class="cr-img-preview-bar hidden"></div>
-            </div>
-
-            <!-- الشعار الثالث: شعار التذييل (Footer) -->
-            <div class="cr-logo-config-box">
-              <label>3. شعار التذييل السفلي (Footer Logo)</label>
-              <input type="file" id="file-logo-footer" accept="image/*" class="cr-input" style="margin-bottom:8px;">
-              <input type="url" id="set-logo-footer" class="cr-input" dir="ltr" placeholder="https://...">
-              <div id="preview-logo-footer" class="cr-img-preview-bar hidden"></div>
-            </div>
-          </div>
-
-          <div class="cr-grid-2" style="margin-top: 18px;">
-            <div class="cr-logo-config-box">
-              <label>الصورة الافتراضية للأخبار (تظهر للأخبار التي ليس لها صورة)</label>
-              <input type="file" id="file-default-post-img" accept="image/*" class="cr-input" style="margin-bottom:8px;">
-              <input type="url" id="set-default-post-img" class="cr-input" dir="ltr" placeholder="https://...">
-              <div id="preview-default-post-img" class="cr-img-preview-bar hidden"></div>
-            </div>
-
-            <div class="cr-logo-config-box">
-              <label>أيقونة المتصفح والتطبيق (Favicon & App Icon)</label>
-              <input type="file" id="file-favicon-img" accept="image/*" class="cr-input" style="margin-bottom:8px;">
-              <input type="url" id="set-favicon-img" class="cr-input" dir="ltr" placeholder="https://...">
-              <div id="preview-favicon-img" class="cr-img-preview-bar hidden"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 3. روابط منصات التواصل الاجتماعي للموقع العام -->
-        <div class="cr-panel-card">
-          <div class="cr-panel-header">
-            <div class="cr-title-row">
-              <span class="aj-pillar"></span>
-              <h2>روابط منصات التواصل الاجتماعي الرسمية</h2>
-            </div>
-          </div>
-
-          <div class="cr-grid-2">
+          <!-- التبويب 2: ميثاق الشرف الصحفي والصفحات المؤسسية -->
+          <div id="set-pane-charter" class="cr-settings-pane hidden">
             <div class="cr-field">
-              <label for="soc-whatsapp">قناة أو رقم واتساب المنصة</label>
-              <input type="url" id="soc-whatsapp" class="cr-input" dir="ltr" placeholder="https://whatsapp.com/channel/...">
-            </div>
-            <div class="cr-field">
-              <label for="soc-telegram">قناة تليجرام</label>
-              <input type="url" id="soc-telegram" class="cr-input" dir="ltr" placeholder="https://t.me/...">
-            </div>
-            <div class="cr-field">
-              <label for="soc-x">حساب منصة X (تويتر)</label>
-              <input type="url" id="soc-x" class="cr-input" dir="ltr" placeholder="https://x.com/...">
-            </div>
-            <div class="cr-field">
-              <label for="soc-facebook">صفحة فيسبوك الرسمية</label>
-              <input type="url" id="soc-facebook" class="cr-input" dir="ltr" placeholder="https://facebook.com/...">
-            </div>
-            <div class="cr-field">
-              <label for="soc-youtube">قناة يوتيوب</label>
-              <input type="url" id="soc-youtube" class="cr-input" dir="ltr" placeholder="https://youtube.com/...">
-            </div>
-            <div class="cr-field">
-              <label for="soc-tiktok">حساب تيك توك</label>
-              <input type="url" id="soc-tiktok" class="cr-input" dir="ltr" placeholder="https://tiktok.com/@...">
-            </div>
-          </div>
-        </div>
-
-        <!-- 4. ميثاق الشرف الصحفي والصفحات المؤسسية (من نحن / الخصوصية) -->
-        <div class="cr-panel-card">
-          <div class="cr-panel-header">
-            <div class="cr-title-row">
-              <span class="aj-pillar"></span>
-              <h2>ميثاق الشرف الصحفي والصفحات المؤسسية</h2>
-            </div>
-            <span class="cr-pill-badge">إصدار الميثاق الحالي: <strong id="current-charter-version-badge">1</strong></span>
-          </div>
-
-          <div class="cr-field">
-            <label for="set-charter-html">بنود ميثاق الشرف الصحفي (يظهر في الموقع العام وفي نافذة توقيع الصحفيين في غرفة الأخبار)</label>
-            <textarea id="set-charter-html" class="cr-textarea" rows="7"></textarea>
-          </div>
-
-          <div class="cr-charter-bump-alert">
-            <label class="cr-chip-checkbox" style="border-color:var(--brand-border);background:#fff1f2;">
-              <input type="checkbox" id="set-bump-charter-version">
-              <span><strong>ترقية إصدار الميثاق وإرسال إشعار توقيع جديد لكافة الصحفيين</strong> (يظهر لهم تنبيه التوقيع لمرة واحدة دون إيقاف نشرهم للأخبار العاجلة)</span>
-            </label>
-          </div>
-
-          <div class="cr-grid-2" style="margin-top: 18px;">
-            <div class="cr-field">
-              <label for="set-about-html">نص صفحة (من نحن والتوجيه الوطني)</label>
-              <textarea id="set-about-html" class="cr-textarea" rows="5"></textarea>
+              <label for="set-charter-html">بنود ميثاق الشرف الصحفي (تظهر في الموقع العام وفي نافذة توقيع الصحفيين داخل غرفة الأخبار)</label>
+              <textarea id="set-charter-html" class="cr-textarea" rows="7"></textarea>
             </div>
 
             <div class="cr-field">
-              <label for="set-privacy-html">نص صفحة (سياسة الخصوصية)</label>
-              <textarea id="set-privacy-html" class="cr-textarea" rows="5"></textarea>
+              <label class="cr-chip-checkbox" style="border-color:var(--brand-border);background:#fff1f2;">
+                <input type="checkbox" id="set-bump-charter-version">
+                <span><strong>ترقية إصدار الميثاق وإرسال إشعار توقيع جديد لكافة الصحفيين</strong> (يظهر لهم تنبيه التوقيع لمرة واحدة دون إيقاف نشرهم للأخبار العاجلة)</span>
+              </label>
+            </div>
+
+            <div class="cr-grid-2" style="margin-top: 16px;">
+              <div class="cr-field">
+                <label for="set-about-html">نص صفحة (من نحن والتوجه الوطني)</label>
+                <textarea id="set-about-html" class="cr-textarea" rows="5"></textarea>
+              </div>
+
+              <div class="cr-field">
+                <label for="set-privacy-html">نص صفحة (سياسة الخصوصية)</label>
+                <textarea id="set-privacy-html" class="cr-textarea" rows="5"></textarea>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- 5. بيانات الدخول العليا للمدير العام (Master Admin Credentials) -->
-        <div class="cr-panel-card">
-          <div class="cr-panel-header">
-            <div class="cr-title-row">
-              <span class="aj-pillar"></span>
-              <h2>بيانات الدخول العليا للمدير العام (Master Admin)</h2>
+          <!-- التبويب 3: التواصل الاجتماعي، بيانات المدير العام، ومفتاح ImgBB API -->
+          <div id="set-pane-security" class="cr-settings-pane hidden">
+            <h3 style="font-size:0.95rem;font-weight:900;margin-bottom:12px;color:var(--brand-primary);">روابط منصات التواصل الاجتماعي الرسمية</h3>
+            <div class="cr-grid-2">
+              <div class="cr-field">
+                <label for="soc-whatsapp">قناة أو رقم واتساب المنصة</label>
+                <input type="url" id="soc-whatsapp" class="cr-input" dir="ltr" placeholder="https://whatsapp.com/channel/...">
+              </div>
+              <div class="cr-field">
+                <label for="soc-telegram">قناة تليجرام</label>
+                <input type="url" id="soc-telegram" class="cr-input" dir="ltr" placeholder="https://t.me/...">
+              </div>
+              <div class="cr-field">
+                <label for="soc-x">حساب منصة X (تويتر)</label>
+                <input type="url" id="soc-x" class="cr-input" dir="ltr" placeholder="https://x.com/...">
+              </div>
+              <div class="cr-field">
+                <label for="soc-facebook">صفحة فيسبوك الرسمية</label>
+                <input type="url" id="soc-facebook" class="cr-input" dir="ltr" placeholder="https://facebook.com/...">
+              </div>
+              <div class="cr-field">
+                <label for="soc-youtube">قناة يوتيوب</label>
+                <input type="url" id="soc-youtube" class="cr-input" dir="ltr" placeholder="https://youtube.com/...">
+              </div>
+              <div class="cr-field">
+                <label for="soc-tiktok">حساب تيك توك</label>
+                <input type="url" id="soc-tiktok" class="cr-input" dir="ltr" placeholder="https://tiktok.com/@...">
+              </div>
             </div>
-          </div>
 
-          <div class="cr-grid-3">
-            <div class="cr-field">
-              <label for="set-master-username">اسم مستخدم المدير العام</label>
-              <input type="text" id="set-master-username" class="cr-input" dir="ltr" required>
+            <h3 style="font-size:0.95rem;font-weight:900;margin:18px 0 12px;color:var(--brand-primary);">بيانات الدخول العليا للمدير العام ومفتاح السحابة المصورة (ImgBB API)</h3>
+            <div class="cr-grid-3">
+              <div class="cr-field">
+                <label for="set-master-username">اسم مستخدم المدير العام</label>
+                <input type="text" id="set-master-username" class="cr-input" dir="ltr" required>
+              </div>
+              <div class="cr-field">
+                <label for="set-master-password">كلمة مرور المدير العام</label>
+                <input type="text" id="set-master-password" class="cr-input" dir="ltr" required>
+              </div>
+              <div class="cr-field">
+                <label for="set-master-pin">رمز الدخول السريع (PIN) لهذا الجهاز</label>
+                <input type="text" id="set-master-pin" class="cr-input" dir="ltr" maxlength="8" inputmode="numeric">
+              </div>
             </div>
 
             <div class="cr-field">
-              <label for="set-master-password">كلمة مرور المدير العام</label>
-              <input type="text" id="set-master-password" class="cr-input" dir="ltr" required>
-            </div>
-
-            <div class="cr-field">
-              <label for="set-master-pin">رمز الدخول السريع (PIN) لهذا الجهاز</label>
-              <input type="text" id="set-master-pin" class="cr-input" dir="ltr" maxlength="8" inputmode="numeric">
+              <label for="set-imgbb-key">مفتاح رفع الصور الخارجي (ImgBB API Key — معتمد ومفعل في جميع الغرف)</label>
+              <input type="text" id="set-imgbb-key" class="cr-input" dir="ltr" placeholder="6d207e02198a847aa98d0a2a901485a5">
             </div>
           </div>
 
           <div class="cr-pane-footer">
             <button type="submit" id="save-all-settings-btn" class="cr-btn cr-btn-primary cr-btn-lg">
               <span class="material-symbols-rounded" translate="no">save</span>
-              <span>حفظ وتعميم كافة إعدادات المنصة والهوية والميثاق</span>
+              <span class="cr-btn-label">حفظ وتعميم كافة إعدادات المنصة والهوية والميثاق</span>
             </button>
           </div>
-        </div>
 
-      </form>
+        </form>
+      </div>
     </section>
 
   </main>
 
   <!-- =====================================================================
-       4. النوافذ القيادية المنبثقة (Modals):
+       5. النوافذ القيادية الزجاجية المنبثقة (Modals):
           (أ) نافذة إضافة صحفي جديد وتخصيص أقسامه المسموحة
-          (ب) نافذة الملف الشخصي الشامل والتحكم الكامل ببيانات الصحفي (Dossier)
-          (ج) نافذة المعاينة والتعديل الشامل لأي خبر قبل أو بعد نشره
-          (د) عارض الصور المكبر لوثائق الهوية والتوقيعات (Lightbox)
+          (ب) نافذة الملف الشخصي الشامل والتحكم المطلق بالصحفي (Dossier)
+          (ج) نافذة التعديل الشامل لأي خبر (مع شريط أدوات تحرير ورفع صور ImgBB)
+          (د) نافذة المعاينة الحية للخبر قبل اعتماده
+          (هـ) نافذة التأكيد الزجاجية الآمنة لمنع النقرات الخاطئة
+          (و) عارض الصور المكبر لوثائق الهوية والتوقيعات (Lightbox)
        ===================================================================== -->
 
   <!-- (أ) نافذة إنشاء حساب صحفي جديد وتحديد أقسامه -->
@@ -799,9 +840,9 @@
         </div>
 
         <div class="cr-pane-footer">
-          <button type="submit" class="cr-btn cr-btn-primary cr-btn-full">
+          <button type="submit" id="create-staff-submit-btn" class="cr-btn cr-btn-primary cr-btn-full cr-btn-lg">
             <span class="material-symbols-rounded" translate="no">badge</span>
-            <span>إنشاء الحساب وتوليد رقم الهوية الصحفية (HP#####)</span>
+            <span class="cr-btn-label">إنشاء الحساب وتوليد رقم الهوية الصحفية (HP#####)</span>
           </button>
         </div>
       </form>
@@ -825,7 +866,7 @@
     </div>
   </div>
 
-  <!-- (ج) نافذة المعاينة والتعديل الكامل لأي خبر (Article Master Editor Modal) -->
+  <!-- (ج) نافذة المعاينة والتعديل الشامل لأي خبر (Article Master Editor Modal) -->
   <div id="edit-post-modal" class="cr-modal-overlay hidden" role="dialog" aria-modal="true">
     <div class="cr-modal-card cr-modal-xl">
       <div class="cr-modal-header">
@@ -861,19 +902,20 @@
             <input type="text" id="admin-post-subcategory" class="cr-input">
           </div>
           <div class="cr-field">
-            <label for="admin-post-status">حالة النشر</label>
+            <label for="admin-post-status">حالة النشر (تحتفظ بحالة الخبر الحالية تلقائياً)</label>
             <select id="admin-post-status" class="cr-select">
               <option value="published">منشور ومفعل في الموقع العام</option>
               <option value="pending">معلق بانتظار المراجعة</option>
               <option value="draft">مسودة مخفية</option>
               <option value="rejected">معاد للمحرر للتعديل</option>
+              <option value="delete_request">مطلوب حذفه (مخفي مؤقتاً)</option>
             </select>
           </div>
         </div>
 
         <div class="cr-grid-2">
           <div class="cr-field">
-            <label>الصورة البارزة للخبر (رفع صورة جديدة أو تعديل الرابط)</label>
+            <label>الصورة البارزة للخبر (رفع سحابي لـ ImgBB أو تعديل الرابط)</label>
             <input type="file" id="admin-post-image-file" accept="image/*" class="cr-input" style="margin-bottom:6px;">
             <input type="url" id="admin-post-image-url" class="cr-input" dir="ltr" placeholder="https://...">
           </div>
@@ -902,7 +944,26 @@
         </div>
 
         <div class="cr-field">
-          <label>النص الكامل للمادة الصحفية</label>
+          <label>النص الكامل للمادة الصحفية (مع شريط أدوات التنسيق وإدراج الصور)</label>
+          <div class="cr-editor-toolbar">
+            <button type="button" class="cr-tool-btn" data-admin-cmd="bold" title="عريض">
+              <span class="material-symbols-rounded" translate="no">format_bold</span>
+            </button>
+            <button type="button" class="cr-tool-btn" data-admin-cmd="formatBlock" data-admin-val="H2" title="عنوان H2">
+              <span class="material-symbols-rounded" translate="no">title</span>
+            </button>
+            <button type="button" class="cr-tool-btn" data-admin-cmd="formatBlock" data-admin-val="BLOCKQUOTE" title="اقتباس">
+              <span class="material-symbols-rounded" translate="no">format_quote</span>
+            </button>
+            <button type="button" class="cr-tool-btn" data-admin-cmd="insertUnorderedList" title="قائمة">
+              <span class="material-symbols-rounded" translate="no">format_list_bulleted</span>
+            </button>
+            <button type="button" id="admin-insert-inline-img-btn" class="cr-tool-btn cr-tool-accent">
+              <span class="material-symbols-rounded" translate="no">add_photo_alternate</span>
+              <span>إدراج صورة</span>
+            </button>
+            <input type="file" id="admin-inline-img-input" accept="image/*" class="hidden">
+          </div>
           <div id="admin-post-rich-editor" class="cr-rich-editor" contenteditable="true"></div>
         </div>
 
@@ -912,10 +973,14 @@
             <span>حذف الخبر نهائياً</span>
           </button>
 
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button type="submit" class="cr-btn cr-btn-primary cr-btn-lg">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" id="admin-save-and-publish-btn" class="cr-btn cr-btn-secondary">
+              <span class="material-symbols-rounded" translate="no">public</span>
+              <span>حفظ واعتماد كمنشور فوراً</span>
+            </button>
+            <button type="submit" id="admin-save-post-btn" class="cr-btn cr-btn-primary cr-btn-lg">
               <span class="material-symbols-rounded" translate="no">check_circle</span>
-              <span>حفظ التعديلات واعتماد الحالة</span>
+              <span class="cr-btn-label">حفظ التعديلات بالحالة المحددة</span>
             </button>
           </div>
         </div>
@@ -923,14 +988,60 @@
     </div>
   </div>
 
-  <!-- (د) عارض الصور المكبر لوثائق الهوية والتوقيعات (Lightbox) -->
-  <div id="cr-image-lightbox" class="cr-modal-overlay hidden" style="z-index:11000;">
+  <!-- (د) نافذة المعاينة الحية للخبر كما يظهر للقراء (Live Article Preview Modal) -->
+  <div id="cr-preview-modal" class="cr-modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="cr-modal-card cr-modal-xl">
+      <div class="cr-modal-header">
+        <div class="cr-title-row">
+          <span class="material-symbols-rounded cr-brand-icon" translate="no">visibility</span>
+          <h2>معاينة المادة الصحفية كما تظهر للقراء في الموقع العام</h2>
+        </div>
+        <button type="button" id="close-cr-preview-btn" class="cr-icon-btn">
+          <span class="material-symbols-rounded" translate="no">close</span>
+        </button>
+      </div>
+
+      <article id="cr-preview-article-body" class="cr-preview-reader"></article>
+
+      <div class="cr-pane-footer cr-footer-split">
+        <button type="button" id="cr-preview-edit-btn" class="cr-btn cr-btn-secondary">
+          <span class="material-symbols-rounded" translate="no">edit</span>
+          <span>فتح في المحرر الشامل للتعديل</span>
+        </button>
+        <button type="button" id="cr-preview-approve-btn" class="cr-btn cr-btn-primary cr-btn-lg">
+          <span class="material-symbols-rounded" translate="no">check_circle</span>
+          <span>اعتماد ونشر هذا الخبر فوراً</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- (هـ) نافذة التأكيد التفاعلية الزجاجية الموحدة (تمنع النقرات الخاطئة في غرفة التحكم) -->
+  <div id="cr-confirm-modal" class="cr-modal-overlay hidden" role="dialog" aria-modal="true" style="z-index:11500;">
+    <div class="cr-modal-card cr-confirm-card">
+      <div class="cr-confirm-icon-wrap" id="cr-confirm-icon-box">
+        <span class="material-symbols-rounded" id="cr-confirm-icon" translate="no">help</span>
+      </div>
+      <h3 id="cr-confirm-title">تأكيد القرار الإداري</h3>
+      <p id="cr-confirm-message">هل أنت متأكد من تنفيذ هذا الإجراء؟</p>
+
+      <div class="cr-confirm-actions">
+        <button type="button" id="cr-confirm-cancel-btn" class="cr-btn cr-btn-secondary">تراجع وإلغاء</button>
+        <button type="button" id="cr-confirm-accept-btn" class="cr-btn cr-btn-primary">
+          <span class="cr-btn-label" id="cr-confirm-accept-label">نعم، تأكيد</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- (و) عارض الصور المكبر لوثائق الهوية والتوقيعات (Lightbox) -->
+  <div id="cr-image-lightbox" class="cr-modal-overlay hidden" style="z-index:12000;">
     <div style="position:relative;max-width:92vw;max-height:90vh;text-align:center;">
       <button type="button" id="close-lightbox-btn" class="cr-btn cr-btn-primary" style="margin-bottom:10px;">
         <span class="material-symbols-rounded" translate="no">close</span>
         <span>إغلاق المعاينة</span>
       </button>
-      <img id="lightbox-preview-img" src="" alt="" style="max-width:100%;max-height:80vh;border-radius:10px;border:2px solid #fff;margin:0 auto;">
+      <img id="lightbox-preview-img" src="" alt="" style="max-width:100%;max-height:80vh;border-radius:12px;border:2px solid #fff;margin:0 auto;">
     </div>
   </div>
 
@@ -941,7 +1052,7 @@
         <img id="footer-logo-img" src="" alt="" class="cr-footer-logo hidden">
         <span>غرفة التحكم العليا — <strong id="footer-site-name">حُجرية بريس</strong> (مؤسسة <strong>RAWI-YE.COM</strong>)</span>
       </div>
-      <span dir="ltr">Control Room v5.0</span>
+      <span dir="ltr">Control Room v6.0</span>
     </div>
   </footer>
 
